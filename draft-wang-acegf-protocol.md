@@ -620,7 +620,7 @@ the same REV.
 * **Derived Key (64 bytes)**:
 [Insert Hex Key here]
 
-### 9.4. Cryptocurrency Wallet Application Profile Test Vectors
+## Cryptocurrency Wallet Application Profile Test Vectors
 
 This section defines test vectors for the **ACEGF Cryptocurrency Wallet
 Application Profile**.
