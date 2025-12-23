@@ -9,7 +9,7 @@ submissiontype: independent
 number:
 date:
 consensus: false
-area: Security
+# area: Security
 keyword:
  - cryptographic identity
  - seed-storage-free
@@ -19,7 +19,7 @@ keyword:
 
 author:
  -
-    fullname: Jian Sheng Wang 
+    fullname: Jian Sheng Wang
     organization: Independent Researcher
     email: jason@aceft.org
 
