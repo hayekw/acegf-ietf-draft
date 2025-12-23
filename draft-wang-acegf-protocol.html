@@ -1338,10 +1338,10 @@ Environments (TEEs).<a href="#section-abstract-3" class="pilcrow">¶</a></p>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3.2.2">
                     <p id="section-toc.1-1.9.2.3.2.2.1"><a href="#section-9.3.2" class="auto internal xref">9.3.2</a>.  <a href="#name-case-b-ml-kem-kyber-key" class="internal xref">Case B: ML-KEM (Kyber) Key</a></p>
 </li>
-                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3.2.3">
-                    <p id="section-toc.1-1.9.2.3.2.3.1"><a href="#section-9.3.3" class="auto internal xref">9.3.3</a>.  <a href="#name-94-cryptocurrency-wallet-ap" class="internal xref">9.4. Cryptocurrency Wallet Application Profile Test Vectors</a></p>
-</li>
                 </ul>
+</li>
+              <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.4">
+                <p id="section-toc.1-1.9.2.4.1"><a href="#section-9.4" class="auto internal xref">9.4</a>.  <a href="#name-cryptocurrency-wallet-appli" class="internal xref">Cryptocurrency Wallet Application Profile Test Vectors</a></p>
 </li>
             </ul>
 </li>
@@ -2502,26 +2502,28 @@ the same REV.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
           </ul>
 </section>
 </div>
+</section>
+</div>
 <div id="cryptocurrency-wallet-application-profile-test-vectors">
-<section id="section-9.3.3">
-          <h4 id="name-94-cryptocurrency-wallet-ap">
-<a href="#section-9.3.3" class="section-number selfRef">9.3.3. </a><a href="#name-94-cryptocurrency-wallet-ap" class="section-name selfRef">9.4. Cryptocurrency Wallet Application Profile Test Vectors</a>
-          </h4>
-<p id="section-9.3.3-1">This section defines test vectors for the <strong>ACEGF Cryptocurrency Wallet
-Application Profile</strong>.<a href="#section-9.3.3-1" class="pilcrow">¶</a></p>
-<p id="section-9.3.3-2">These test vectors are intended to demonstrate the deterministic behavior
+<section id="section-9.4">
+        <h3 id="name-cryptocurrency-wallet-appli">
+<a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-cryptocurrency-wallet-appli" class="section-name selfRef">Cryptocurrency Wallet Application Profile Test Vectors</a>
+        </h3>
+<p id="section-9.4-1">This section defines test vectors for the <strong>ACEGF Cryptocurrency Wallet
+Application Profile</strong>.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
+<p id="section-9.4-2">These test vectors are intended to demonstrate the deterministic behavior
 of ACEGF when applied to a multi-chain cryptocurrency wallet context,
 including mnemonic generation, passphrase-based rekeying, identity
-reconstruction ("view"), and migration from legacy wallet mnemonics.<a href="#section-9.3.3-2" class="pilcrow">¶</a></p>
-<p id="section-9.3.3-3">These vectors <strong>DO NOT</strong> validate the ACEGF protocol encoding, wire format,
+reconstruction ("view"), and migration from legacy wallet mnemonics.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
+<p id="section-9.4-3">These vectors <strong>DO NOT</strong> validate the ACEGF protocol encoding, wire format,
 or generic file representations defined elsewhere in this document.
 Instead, they apply exclusively to implementations that claim conformance
-to the wallet application profile.<a href="#section-9.3.3-3" class="pilcrow">¶</a></p>
-<p id="section-9.3.3-4">Implementations that do not support this application profile are not
-required to produce identical results.<a href="#section-9.3.3-4" class="pilcrow">¶</a></p>
-<p id="section-9.3.3-5">The following test vectors are expressed in JSON format for readability
-and ease of cross-platform testing.<a href="#section-9.3.3-5" class="pilcrow">¶</a></p>
-<div class="breakable lang-json sourcecode" id="section-9.3.3-6">
+to the wallet application profile.<a href="#section-9.4-3" class="pilcrow">¶</a></p>
+<p id="section-9.4-4">Implementations that do not support this application profile are not
+required to produce identical results.<a href="#section-9.4-4" class="pilcrow">¶</a></p>
+<p id="section-9.4-5">The following test vectors are expressed in JSON format for readability
+and ease of cross-platform testing.<a href="#section-9.4-5" class="pilcrow">¶</a></p>
+<div class="breakable lang-json sourcecode" id="section-9.4-6">
 <pre>
 {
 "description": "ACEGF / MSCIKDF Deterministic Identity Test Vectors V1.0",
@@ -2642,13 +2644,11 @@ and ease of cross-platform testing.<a href="#section-9.3.3-5" class="pilcrow">¶
 ]
 }
 
-</pre><a href="#section-9.3.3-6" class="pilcrow">¶</a>
+</pre><a href="#section-9.4-6" class="pilcrow">¶</a>
 </div>
-<p id="section-9.3.3-7">Implementations that claim conformance to the ACEGF Cryptocurrency Wallet
+<p id="section-9.4-7">Implementations that claim conformance to the ACEGF Cryptocurrency Wallet
 Application Profile SHOULD produce identical results for the test vectors
-defined in this section when provided with the same input parameters.<a href="#section-9.3.3-7" class="pilcrow">¶</a></p>
-</section>
-</div>
+defined in this section when provided with the same input parameters.<a href="#section-9.4-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>

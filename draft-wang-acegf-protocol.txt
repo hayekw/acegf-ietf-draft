@@ -120,8 +120,7 @@ Table of Contents
      9.3.  Multi-Algorithm Derivation (ECC + PQC)
        9.3.1.  Case A: Ed25519 Signing Key
        9.3.2.  Case B: ML-KEM (Kyber) Key
-       9.3.3.  9.4.  Cryptocurrency Wallet Application Profile Test
-               Vectors
+     9.4.  Cryptocurrency Wallet Application Profile Test Vectors
    10. References
      10.1.  Normative References
      10.2.  Informative References
@@ -828,7 +827,7 @@ Table of Contents
 
    *  *Derived Key (64 bytes)*: [Insert Hex Key here]
 
-9.3.3.  9.4.  Cryptocurrency Wallet Application Profile Test Vectors
+9.4.  Cryptocurrency Wallet Application Profile Test Vectors
 
    This section defines test vectors for the *ACEGF Cryptocurrency
    Wallet Application Profile*.
