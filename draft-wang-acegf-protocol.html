@@ -30,7 +30,7 @@ Environments (TEEs).
 <meta content="key derivation" name="keyword">
 <meta content="post-quantum cryptography" name="keyword">
 <meta content="autonomous digital entities" name="keyword">
-<meta content="draft-wang-acegf-protocol" name="ietf.draft">
+<meta content="draft-wang-acegf-protocol-latest" name="ietf.draft">
 <!-- Generator version information:
   xml2rfc 3.31.0
     Python 3.12.12
@@ -1076,7 +1076,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <dt class="label-workgroup">Workgroup:</dt>
 <dd class="workgroup">Network Working Group</dd>
 <dt class="label-internet-draft">Internet-Draft:</dt>
-<dd class="internet-draft">draft-wang-acegf-protocol</dd>
+<dd class="internet-draft">draft-wang-acegf-protocol-latest</dd>
 <dt class="label-published">Published:</dt>
 <dd class="published">
 <time datetime="2025-12-23" class="published">23 December 2025</time>
@@ -1113,6 +1113,14 @@ non-disruptive migration to Post-Quantum Cryptography (PQC). This
 specification details the underlying data structures, derivation logic,
 and recommended implementation strategies within Trusted Execution
 Environments (TEEs).<a href="#section-abstract-3" class="pilcrow">¶</a></p>
+</section>
+<section class="note rfcEditorRemove" id="section-note.1">
+      <h2 id="name-discussion-venues">
+<a href="#name-discussion-venues" class="section-name selfRef">Discussion Venues</a>
+      </h2>
+<p id="section-note.1-1">This note is to be removed before publishing as an RFC.<a href="#section-note.1-1" class="pilcrow">¶</a></p>
+<p id="section-note.1-2">Source for this draft and an issue tracker can be found at
+    <span><a href="https://github.com/hayekw/acegf-ietf-draft">https://github.com/hayekw/acegf-ietf-draft</a></span>.<a href="#section-note.1-2" class="pilcrow">¶</a></p>
 </section>
 <div id="status-of-memo">
 <section id="section-boilerplate.1">
@@ -1226,6 +1234,9 @@ Environments (TEEs).<a href="#section-abstract-3" class="pilcrow">¶</a></p>
 </li>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4.2.2">
                     <p id="section-toc.1-1.4.2.4.2.2.1"><a href="#section-4.4.2" class="auto internal xref">4.4.2</a>.  <a href="#name-computational-independence-" class="internal xref">Computational Independence Guarantee</a></p>
+</li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.4.2.4.2.3">
+                    <p id="section-toc.1-1.4.2.4.2.3.1"><a href="#section-4.4.3" class="auto internal xref">4.4.3</a>.  <a href="#name-algorithm-specific-key-mate" class="internal xref">Algorithm-Specific Key Material Mapping</a></p>
 </li>
                 </ul>
 </li>
@@ -1532,8 +1543,12 @@ of the Root Entropy Value (REV).<a href="#section-3.2-1" class="pilcrow">¶</a><
             <p id="section-3.2-2.1.1"><strong>Misuse Resistance</strong>: AES-GCM-SIV is selected for its Synthetic
 Initialization Vector (SIV) properties. In the specific context of
 ACE-GF, given that the REV is a 256-bit high-entropy random value,
-using a fixed 96-bit all-zero nonce (N_fixed) is mathematically
-secure.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
+using a fixed 96-bit all-zero nonce (N_fixed) is safe under the
+assumption that the plaintext (REV) is a uniformly random,
+high-entropy value and that the sealing key is not reused for
+arbitrary plaintexts. This assumption holds exclusively for the
+sealing of REV values and MUST NOT be generalized to arbitrary data
+encryption use cases.<a href="#section-3.2-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li class="normal" id="section-3.2-2.2">
             <p id="section-3.2-2.2.1"><strong>Security Assurance</strong>: The use of AES-GCM-SIV prevents confidentiality
@@ -1713,11 +1728,44 @@ being used as the 'info' parameter in HKDF.<a href="#section-4.4.1-3" class="pil
           </h4>
 <p id="section-4.4.2-1">The derivation follows the HKDF-SHA256 Extract-and-Expand logic:
 1.  <code>PRK = HKDF-Extract(Salt=0, IKM=REV)</code>
-2.  <code>DerivedKey = HKDF-Expand(PRK, info=Ctx, L=KeyLength)</code><a href="#section-4.4.2-1" class="pilcrow">¶</a></p>
-<p id="section-4.4.2-2">By including the AlgID and Domain in the 'info' parameter, the
+2.  <code>DerivedKey = HKDF-Expand(PRK, info=Ctx, output_length)</code><a href="#section-4.4.2-1" class="pilcrow">¶</a></p>
+<p id="section-4.4.2-2">Given that the REV is a uniformly random 256-bit value, a zero-length salt
+is sufficient for HKDF-Extract; implementations MAY alternatively use a
+fixed protocol-specific salt string for explicit domain separation.<a href="#section-4.4.2-2" class="pilcrow">¶</a></p>
+<p id="section-4.4.2-3">By including the AlgID and Domain in the 'info' parameter, the
 framework guarantees that a compromise of one DerivedKey provides
 no computational advantage in recovering the REV or any other
-DerivedKey associated with a different Ctx.<a href="#section-4.4.2-2" class="pilcrow">¶</a></p>
+DerivedKey associated with a different Ctx.<a href="#section-4.4.2-3" class="pilcrow">¶</a></p>
+</section>
+</div>
+<div id="algorithm-specific-key-material-mapping">
+<section id="section-4.4.3">
+          <h4 id="name-algorithm-specific-key-mate">
+<a href="#section-4.4.3" class="section-number selfRef">4.4.3. </a><a href="#name-algorithm-specific-key-mate" class="section-name selfRef">Algorithm-Specific Key Material Mapping</a>
+          </h4>
+<p id="section-4.4.3-1">The output of HKDF-Expand (<code>DerivedKey</code>) MUST be mapped to algorithm-specific
+key material according to the requirements of the target algorithm.<a href="#section-4.4.3-1" class="pilcrow">¶</a></p>
+<ul class="normal">
+<li class="normal" id="section-4.4.3-2.1">
+              <p id="section-4.4.3-2.1.1"><strong>Ed25519</strong>: The 32-byte <code>DerivedKey</code> MUST be used as the Ed25519 private key
+seed as specified in RFC 8032.<a href="#section-4.4.3-2.1.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-4.4.3-2.2">
+              <p id="section-4.4.3-2.2.1"><strong>X25519</strong>: The <code>DerivedKey</code> MUST be interpreted as a 32-byte scalar and
+clamped as specified in RFC 7748.<a href="#section-4.4.3-2.2.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-4.4.3-2.3">
+              <p id="section-4.4.3-2.3.1"><strong>secp256k1 (ECDSA)</strong>: The <code>DerivedKey</code> MUST be interpreted as a big-endian
+integer and reduced modulo the curve order. If the resulting value is zero,
+the implementation MUST re-derive key material using an incremented internal
+counter.<a href="#section-4.4.3-2.3.1" class="pilcrow">¶</a></p>
+</li>
+            <li class="normal" id="section-4.4.3-2.4">
+              <p id="section-4.4.3-2.4.1"><strong>ML-DSA (Dilithium)</strong> and <strong>ML-KEM (Kyber)</strong>: The <code>DerivedKey</code> MUST be used
+as deterministic seed input to the key generation procedures defined in
+FIPS 204 and FIPS 203, respectively.<a href="#section-4.4.3-2.4.1" class="pilcrow">¶</a></p>
+</li>
+          </ul>
 </section>
 </div>
 </section>
@@ -2018,8 +2066,9 @@ cryptographic primitives and the rigor of the implementation environment.<a href
 entropy of the Authorization Credential (Cred).<a href="#section-7.1-1" class="pilcrow">¶</a></p>
 <ol start="1" type="1" class="normal type-1" id="section-7.1-2">
 <li id="section-7.1-2.1">
-            <p id="section-7.1-2.1.1"><strong>Minimum Entropy</strong>: Credentials SHOULD possess at least 128 bits of
-entropy to resist sophisticated offline attacks.<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>
+            <p id="section-7.1-2.1.1"><strong>Minimum Entropy</strong>: Human-provided credentials SHOULD be long, randomly
+generated passphrases managed by password managers. Machine-generated
+credentials MUST provide at least 128 bits of entropy.<a href="#section-7.1-2.1.1" class="pilcrow">¶</a></p>
 </li>
           <li id="section-7.1-2.2">
             <p id="section-7.1-2.2.1"><strong>Entropy Stretching</strong>: While Argon2id provides significant resistance
@@ -2154,8 +2203,10 @@ with standard AES-GCM.<a href="#section-7.5-1" class="pilcrow">¶</a></p>
       <h2 id="name-iana-considerations">
 <a href="#section-8" class="section-number selfRef">8. </a><a href="#name-iana-considerations" class="section-name selfRef">IANA Considerations</a>
       </h2>
-<p id="section-8-1">This document requests IANA to create two new registries for the Atomic
-Cryptographic Entity Generative Framework (ACE-GF).<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-1">This section describes a proposed registry structure. Creation of IANA
+registries is contingent on the publication status of this document.<a href="#section-8-1" class="pilcrow">¶</a></p>
+<p id="section-8-2">This document requests IANA to create two new registries for the Atomic
+Cryptographic Entity Generative Framework (ACE-GF).<a href="#section-8-2" class="pilcrow">¶</a></p>
 <div id="ace-gf-sealing-profile-registry">
 <section id="section-8.1">
         <h3 id="name-ace-gf-sealing-profile-regi">
