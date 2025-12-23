@@ -39,7 +39,7 @@ keyword:
 author:
  -
     fullname: Jian Sheng Wang 
-    organization: ACEFG Labs
+    organization: Independent Researcher
     email: jason@aceft.org
 
 normative:
