@@ -6,24 +6,24 @@
 <meta content="initial-scale=1.0" name="viewport">
 <title>ACE-GF: A Generative Framework for Atomic Cryptographic Entities</title>
 <meta content="Jian Sheng Wang" name="author">
-<meta content='
-       This document defines ACE-GF (Atomic Cryptographic Entity Generative Framework),
-a cryptographic construction designed to establish atomic identities for
-Autonomous Digital Entities (ADEs). 
-       The primary contribution of ACE-GF is the realization of a "Seed-Storage-Free"
-architecture. By combining Misuse-Resistant Authenticated Encryption (MRAE)
-with Argon2id-based password hashing, the framework encrypts the identity root,
-referred to as the Root Entropy Value (REV), into a "Sealed Artifact" (SA).
-The REV is reconstructed ephemerally in memory only upon successful
-authorization via user credentials, thereby mitigating the systemic security
-risks associated with the persistent storage of high-value master seeds. 
-       Furthermore, the framework utilizes HKDF with explicit context encoding to
-achieve robust key isolation across diverse algorithms, natively supporting
-non-disruptive migration to Post-Quantum Cryptography (PQC). This
-specification details the underlying data structures, derivation logic,
-and recommended implementation strategies within Trusted Execution
-Environments (TEEs). 
-    ' name="description">
+<meta content="
+       This document specifies the Atomic Context-Encoded Generation Framework
+(ACEGF), a cryptographic construction for deriving and reconstructing
+stable digital identities from user-held credentials without requiring
+persistent storage of a master secret. 
+       ACEGF addresses a structural limitation of existing deterministic
+key-derivation and identity systems, which rely on long-lived root
+secrets and rigid derivation hierarchies.  By separating identity
+reconstruction from long-term secret storage, ACEGF enables stateless
+identity recovery, credential rekeying, and context-isolated derivation
+across multiple cryptographic algorithms. 
+       The framework is designed to be application-agnostic and may be applied
+to diverse environments such as authentication systems, distributed
+identities, secure key management, and cryptographic wallets.  This
+document defines the core construction, security properties, and
+interoperability considerations of ACEGF, while application-specific
+profiles are defined separately. 
+    " name="description">
 <meta content="xml2rfc 3.31.0" name="generator">
 <meta content="cryptographic identity" name="keyword">
 <meta content="seed-storage-free" name="keyword">
@@ -1097,22 +1097,22 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <h1 id="title">ACE-GF: A Generative Framework for Atomic Cryptographic Entities</h1>
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
-<p id="section-abstract-1">This document defines ACE-GF (Atomic Cryptographic Entity Generative Framework),
-a cryptographic construction designed to establish atomic identities for
-Autonomous Digital Entities (ADEs).<a href="#section-abstract-1" class="pilcrow">¶</a></p>
-<p id="section-abstract-2">The primary contribution of ACE-GF is the realization of a "Seed-Storage-Free"
-architecture. By combining Misuse-Resistant Authenticated Encryption (MRAE)
-with Argon2id-based password hashing, the framework encrypts the identity root,
-referred to as the Root Entropy Value (REV), into a "Sealed Artifact" (SA).
-The REV is reconstructed ephemerally in memory only upon successful
-authorization via user credentials, thereby mitigating the systemic security
-risks associated with the persistent storage of high-value master seeds.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
-<p id="section-abstract-3">Furthermore, the framework utilizes HKDF with explicit context encoding to
-achieve robust key isolation across diverse algorithms, natively supporting
-non-disruptive migration to Post-Quantum Cryptography (PQC). This
-specification details the underlying data structures, derivation logic,
-and recommended implementation strategies within Trusted Execution
-Environments (TEEs).<a href="#section-abstract-3" class="pilcrow">¶</a></p>
+<p id="section-abstract-1">This document specifies the Atomic Context-Encoded Generation Framework
+(ACEGF), a cryptographic construction for deriving and reconstructing
+stable digital identities from user-held credentials without requiring
+persistent storage of a master secret.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
+<p id="section-abstract-2">ACEGF addresses a structural limitation of existing deterministic
+key-derivation and identity systems, which rely on long-lived root
+secrets and rigid derivation hierarchies.  By separating identity
+reconstruction from long-term secret storage, ACEGF enables stateless
+identity recovery, credential rekeying, and context-isolated derivation
+across multiple cryptographic algorithms.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
+<p id="section-abstract-3">The framework is designed to be application-agnostic and may be applied
+to diverse environments such as authentication systems, distributed
+identities, secure key management, and cryptographic wallets.  This
+document defines the core construction, security properties, and
+interoperability considerations of ACEGF, while application-specific
+profiles are defined separately.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
       <h2 id="name-discussion-venues">
@@ -1431,36 +1431,64 @@ across algorithms (e.g., Ed25519, PQC) using explicit
         <h3 id="name-terminology">
 <a href="#section-1.3" class="section-number selfRef">1.3. </a><a href="#name-terminology" class="section-name selfRef">Terminology</a>
         </h3>
-<p id="section-1.3-1">The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
-"SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY",
-and "OPTIONAL" in this document are to be interpreted as
-described in BCP 14 [RFC2119] [RFC8174].<a href="#section-1.3-1" class="pilcrow">¶</a></p>
-<p id="section-1.3-2">This document defines the following core terms:<a href="#section-1.3-2" class="pilcrow">¶</a></p>
-<ul class="normal">
-<li class="normal" id="section-1.3-3.1">
-            <p id="section-1.3-3.1.1"><strong>ACE (Atomic Cryptographic Entity)</strong>: A digital identity
-represented by a stable entropy source that is
-not stored in persistent plaintext.<a href="#section-1.3-3.1.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-1.3-3.2">
-            <p id="section-1.3-3.2.1"><strong>REV (Root Entropy Value)</strong>: A 256-bit high-entropy
-secret used as the foundation of an ACE's identity.
-It MUST remain ephemeral in memory.<a href="#section-1.3-3.2.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-1.3-3.3">
-            <p id="section-1.3-3.3.1"><strong>SA (Sealed Artifact)</strong>: An encrypted blob containing
-the REV, protected by the Authorization Pipeline.<a href="#section-1.3-3.3.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-1.3-3.4">
-            <p id="section-1.3-3.4.1"><strong>Cred (Authorization Credential)</strong>: A user-provided
-secret (e.g., password or biometric-derived entropy)
-used to unlock the SA.<a href="#section-1.3-3.4.1" class="pilcrow">¶</a></p>
-</li>
-          <li class="normal" id="section-1.3-3.5">
-            <p id="section-1.3-3.5.1"><strong>Context (Ctx)</strong>: A tuple consisting of (AlgID, Domain, Index)
-used to ensure cryptographic isolation between derived keys.<a href="#section-1.3-3.5.1" class="pilcrow">¶</a></p>
-</li>
-        </ul>
+<p id="section-1.3-1">The following terms are used throughout this document:<a href="#section-1.3-1" class="pilcrow">¶</a></p>
+<span class="break"></span><dl class="dlParallel" id="section-1.3-2">
+          <dt id="section-1.3-2.1"><strong>ACEGF</strong></dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.2">
+            <p id="section-1.3-2.2.1">Atomic Context-Encoded Generation Framework. A cryptographic framework
+that enables deterministic reconstruction of digital identities from
+user-held credentials without requiring persistent storage of a master
+secret.<a href="#section-1.3-2.2.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.3-2.3"><strong>Credential</strong></dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.4">
+            <p id="section-1.3-2.4.1">A user-provided secret input to ACEGF, such as a passphrase, mnemonic,
+or other high-entropy material. Credentials are supplied at the time of
+identity reconstruction and are not persistently stored by the
+framework.<a href="#section-1.3-2.4.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.3-2.5"><strong>Identity</strong></dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.6">
+            <p id="section-1.3-2.6.1">A stable cryptographic identity derived via ACEGF. An identity may
+correspond to one or more public/private key pairs, addresses, or
+identifiers, depending on the application context in which ACEGF is
+applied.<a href="#section-1.3-2.6.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.3-2.7"><strong>Context</strong></dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.8">
+            <p id="section-1.3-2.8.1">An explicit domain-separation parameter used by ACEGF to ensure that
+derived material for different purposes, algorithms, or applications
+remains cryptographically isolated.<a href="#section-1.3-2.8.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.3-2.9"><strong>Rekeying</strong></dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.10">
+            <p id="section-1.3-2.10.1">The process of changing credentials associated with an existing
+identity while preserving the underlying identity semantics. In ACEGF,
+rekeying does not require persistent state or regeneration of the
+identity.<a href="#section-1.3-2.10.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.3-2.11"><strong>Profile</strong></dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.12">
+            <p id="section-1.3-2.12.1">A specification that defines how ACEGF is applied within a specific
+application domain. Profiles may impose additional constraints,
+parameters, or output formats, but do not modify the core ACEGF
+construction defined in this document.<a href="#section-1.3-2.12.1" class="pilcrow">¶</a></p>
+</dd>
+          <dd class="break"></dd>
+<dt id="section-1.3-2.13"><strong>Wallet Application Profile</strong></dt>
+          <dd style="margin-left: 1.5em" id="section-1.3-2.14">
+            <p id="section-1.3-2.14.1">An application profile that applies ACEGF to cryptocurrency wallet
+systems, including multi-algorithm key derivation and migration from
+legacy wallet formats. This profile is illustrative and does not
+constrain other applications of ACEGF.<a href="#section-1.3-2.14.1" class="pilcrow">¶</a></p>
+</dd>
+        <dd class="break"></dd>
+</dl>
 </section>
 </div>
 </section>
