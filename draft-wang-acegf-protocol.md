@@ -643,7 +643,7 @@ and ease of cross-platform testing.
 
 ~~~ json
 {
-"description": "ACEGF / MSCIKDF Deterministic Identity Test Vectors V1.0",
+"description": "ACEGF Deterministic Identity Test Vectors V1.0",
 "project_version": "2025.12.23",
 "test_cases": [
 {
