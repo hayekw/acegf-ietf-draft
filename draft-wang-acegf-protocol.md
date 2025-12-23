@@ -1,6 +1,6 @@
 ---
 title: "ACE-GF: A Generative Framework for Atomic Cryptographic Entities"
-abbrev: "ACEGF"
+abbrev: "ACE-GF"
 category: info
 
 ipr: trust200902
@@ -30,14 +30,14 @@ informative:
 --- abstract
 
 This document specifies the Atomic Context-Encoded Generation Framework
-(ACEGF), a cryptographic construction for deriving and reconstructing
+(ACE-GF), a cryptographic construction for deriving and reconstructing
 stable digital identities from user-held credentials without requiring
 persistent storage of a master secret.
 
-ACEGF addresses a structural limitation of existing deterministic
+ACE-GF addresses a structural limitation of existing deterministic
 key-derivation and identity systems, which rely on long-lived root
 secrets and rigid derivation hierarchies.  By separating identity
-reconstruction from long-term secret storage, ACEGF enables stateless
+reconstruction from long-term secret storage, ACE-GF enables stateless
 identity recovery, credential rekeying, and context-isolated derivation
 across multiple cryptographic algorithms.
 
@@ -45,7 +45,7 @@ The framework is designed to be application-agnostic and may be applied
 to diverse environments such as authentication systems, distributed
 identities, secure key management, and cryptographic wallets.  This
 document defines the core construction, security properties, and
-interoperability considerations of ACEGF, while application-specific
+interoperability considerations of ACE-GF, while application-specific
 profiles are defined separately.
 
 --- middle
@@ -85,46 +85,46 @@ across algorithms (e.g., Ed25519, PQC) using explicit
 
 The following terms are used throughout this document:
 
-**ACEGF**
-: Atomic Context-Encoded Generation Framework. A cryptographic framework
+**ACE-GF**
+: Atomic Cryptographic Entity Generative Framework. A cryptographic framework
 that enables deterministic reconstruction of digital identities from
 user-held credentials without requiring persistent storage of a master
 secret.
 
 **Credential**
-: A user-provided secret input to ACEGF, such as a passphrase, mnemonic,
+: A user-provided secret input to ACE-GF, such as a passphrase, mnemonic,
 or other high-entropy material. Credentials are supplied at the time of
 identity reconstruction and are not persistently stored by the
 framework.
 
 **Identity**
-: A stable cryptographic identity derived via ACEGF. An identity may
+: A stable cryptographic identity derived via ACE-GF. An identity may
 correspond to one or more public/private key pairs, addresses, or
-identifiers, depending on the application context in which ACEGF is
+identifiers, depending on the application context in which ACE-GF is
 applied.
 
 **Context**
-: An explicit domain-separation parameter used by ACEGF to ensure that
+: An explicit domain-separation parameter used by ACE-GF to ensure that
 derived material for different purposes, algorithms, or applications
 remains cryptographically isolated.
 
 **Rekeying**
 : The process of changing credentials associated with an existing
-identity while preserving the underlying identity semantics. In ACEGF,
+identity while preserving the underlying identity semantics. In ACE-GF,
 rekeying does not require persistent state or regeneration of the
 identity.
 
 **Profile**
-: A specification that defines how ACEGF is applied within a specific
+: A specification that defines how ACE-GF is applied within a specific
 application domain. Profiles may impose additional constraints,
-parameters, or output formats, but do not modify the core ACEGF
+parameters, or output formats, but do not modify the core ACE-GF
 construction defined in this document.
 
 **Wallet Application Profile**
-: An application profile that applies ACEGF to cryptocurrency wallet
+: An application profile that applies ACE-GF to cryptocurrency wallet
 systems, including multi-algorithm key derivation and migration from
 legacy wallet formats. This profile is illustrative and does not
-constrain other applications of ACEGF.
+constrain other applications of ACE-GF.
 
 
 # Architecture and Design Principles
@@ -646,15 +646,15 @@ the same REV.
 
 ## Cryptocurrency Wallet Application Profile Test Vectors
 
-This section defines test vectors for the **ACEGF Cryptocurrency Wallet
+This section defines test vectors for the **ACE-GF Cryptocurrency Wallet
 Application Profile**.
 
 These test vectors are intended to demonstrate the deterministic behavior
-of ACEGF when applied to a multi-chain cryptocurrency wallet context,
+of ACE-GF when applied to a multi-chain cryptocurrency wallet context,
 including mnemonic generation, passphrase-based rekeying, identity
 reconstruction ("view"), and migration from legacy wallet mnemonics.
 
-These vectors **DO NOT** validate the ACEGF protocol encoding, wire format,
+These vectors **DO NOT** validate the ACE-GF protocol encoding, wire format,
 or generic file representations defined elsewhere in this document.
 Instead, they apply exclusively to implementations that claim conformance
 to the wallet application profile.
@@ -667,13 +667,13 @@ and ease of cross-platform testing.
 
 ~~~ json
 {
-"description": "ACEGF Deterministic Identity Test Vectors V1.0",
+"description": "ACE-GF Deterministic Identity Test Vectors V1.0",
 "project_version": "2025.12.23",
 "test_cases": [
 {
 "case_id": "TEST_CASE_001",
 "name": "Initial_Generation_ASCII_Passphrase",
-"description": "Generate a new ACEGF identity using ASCII passphrase 'abc'. Establishes Identity #1.",
+"description": "Generate a new ACE-GF identity using ASCII passphrase 'abc'. Establishes Identity #1.",
 "command": "./acegf generate abc",
 "input": {
 "passphrase": "abc"
@@ -727,7 +727,7 @@ and ease of cross-platform testing.
 {
 "case_id": "TEST_CASE_005",
 "name": "Legacy_12_Word_Aceize",
-"description": "Convert a legacy 12-word mnemonic into an ACEGF identity using passphrase 'abc'.",
+"description": "Convert a legacy 12-word mnemonic into an ACE-GF identity using passphrase 'abc'.",
 "command": "./acegf aceize abc [12-word mnemonic]",
 "input": {
 "passphrase": "abc",
@@ -787,7 +787,7 @@ and ease of cross-platform testing.
 
 ~~~
 
-Implementations that claim conformance to the ACEGF Cryptocurrency Wallet
+Implementations that claim conformance to the ACE-GF Cryptocurrency Wallet
 Application Profile SHOULD produce identical results for the test vectors
 defined in this section when provided with the same input parameters.
 
