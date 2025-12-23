@@ -23,6 +23,7 @@ title: "ACE-GF: A Generative Framework for Atomic Cryptographic Entities"
 abbrev: "ACEGF"
 category: info
 
+ipr: trust200902
 docname: draft-wang-acegf-protocol
 submissiontype: independent
 number:
