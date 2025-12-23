@@ -29,24 +29,25 @@ informative:
 
 --- abstract
 
-This document defines ACE-GF (Atomic Cryptographic Entity Generative Framework),
-a cryptographic construction designed to establish atomic identities for
-Autonomous Digital Entities (ADEs).
+This document specifies the Atomic Context-Encoded Generation Framework
+(ACEGF), a cryptographic construction for deriving and reconstructing
+stable digital identities from user-held credentials without requiring
+persistent storage of a master secret.
 
-The primary contribution of ACE-GF is the realization of a "Seed-Storage-Free"
-architecture. By combining Misuse-Resistant Authenticated Encryption (MRAE)
-with Argon2id-based password hashing, the framework encrypts the identity root,
-referred to as the Root Entropy Value (REV), into a "Sealed Artifact" (SA).
-The REV is reconstructed ephemerally in memory only upon successful
-authorization via user credentials, thereby mitigating the systemic security
-risks associated with the persistent storage of high-value master seeds.
+ACEGF addresses a structural limitation of existing deterministic
+key-derivation and identity systems, which rely on long-lived root
+secrets and rigid derivation hierarchies.  By separating identity
+reconstruction from long-term secret storage, ACEGF enables stateless
+identity recovery, credential rekeying, and context-isolated derivation
+across multiple cryptographic algorithms.
 
-Furthermore, the framework utilizes HKDF with explicit context encoding to
-achieve robust key isolation across diverse algorithms, natively supporting
-non-disruptive migration to Post-Quantum Cryptography (PQC). This
-specification details the underlying data structures, derivation logic,
-and recommended implementation strategies within Trusted Execution
-Environments (TEEs).
+The framework is designed to be application-agnostic and may be applied
+to diverse environments such as authentication systems, distributed
+identities, secure key management, and cryptographic wallets.  This
+document defines the core construction, security properties, and
+interoperability considerations of ACEGF, while application-specific
+profiles are defined separately.
+
 --- middle
 
 # Introduction
@@ -82,26 +83,49 @@ across algorithms (e.g., Ed25519, PQC) using explicit
 
 ## Terminology
 
-The key words "MUST", "MUST NOT", "REQUIRED", "SHALL", "SHALL NOT",
-"SHOULD", "SHOULD NOT", "RECOMMENDED", "NOT RECOMMENDED", "MAY",
-and "OPTIONAL" in this document are to be interpreted as
-described in BCP 14 [RFC2119] [RFC8174].
+The following terms are used throughout this document:
 
-This document defines the following core terms:
+**ACEGF**
+: Atomic Context-Encoded Generation Framework. A cryptographic framework
+that enables deterministic reconstruction of digital identities from
+user-held credentials without requiring persistent storage of a master
+secret.
 
-* **ACE (Atomic Cryptographic Entity)**: A digital identity
-represented by a stable entropy source that is
-not stored in persistent plaintext.
-* **REV (Root Entropy Value)**: A 256-bit high-entropy
-secret used as the foundation of an ACE's identity.
-It MUST remain ephemeral in memory.
-* **SA (Sealed Artifact)**: An encrypted blob containing
-the REV, protected by the Authorization Pipeline.
-* **Cred (Authorization Credential)**: A user-provided
-secret (e.g., password or biometric-derived entropy)
-used to unlock the SA.
-* **Context (Ctx)**: A tuple consisting of (AlgID, Domain, Index)
-used to ensure cryptographic isolation between derived keys.
+**Credential**
+: A user-provided secret input to ACEGF, such as a passphrase, mnemonic,
+or other high-entropy material. Credentials are supplied at the time of
+identity reconstruction and are not persistently stored by the
+framework.
+
+**Identity**
+: A stable cryptographic identity derived via ACEGF. An identity may
+correspond to one or more public/private key pairs, addresses, or
+identifiers, depending on the application context in which ACEGF is
+applied.
+
+**Context**
+: An explicit domain-separation parameter used by ACEGF to ensure that
+derived material for different purposes, algorithms, or applications
+remains cryptographically isolated.
+
+**Rekeying**
+: The process of changing credentials associated with an existing
+identity while preserving the underlying identity semantics. In ACEGF,
+rekeying does not require persistent state or regeneration of the
+identity.
+
+**Profile**
+: A specification that defines how ACEGF is applied within a specific
+application domain. Profiles may impose additional constraints,
+parameters, or output formats, but do not modify the core ACEGF
+construction defined in this document.
+
+**Wallet Application Profile**
+: An application profile that applies ACEGF to cryptocurrency wallet
+systems, including multi-algorithm key derivation and migration from
+legacy wallet formats. This profile is illustrative and does not
+constrain other applications of ACEGF.
+
 
 # Architecture and Design Principles
 
