@@ -1338,6 +1338,9 @@ Environments (TEEs).<a href="#section-abstract-3" class="pilcrow">¶</a></p>
                   <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3.2.2">
                     <p id="section-toc.1-1.9.2.3.2.2.1"><a href="#section-9.3.2" class="auto internal xref">9.3.2</a>.  <a href="#name-case-b-ml-kem-kyber-key" class="internal xref">Case B: ML-KEM (Kyber) Key</a></p>
 </li>
+                  <li class="compact toc ulBare ulEmpty" id="section-toc.1-1.9.2.3.2.3">
+                    <p id="section-toc.1-1.9.2.3.2.3.1"><a href="#section-9.3.3" class="auto internal xref">9.3.3</a>.  <a href="#name-94-cryptocurrency-wallet-ap" class="internal xref">9.4. Cryptocurrency Wallet Application Profile Test Vectors</a></p>
+</li>
                 </ul>
 </li>
             </ul>
@@ -2497,6 +2500,153 @@ the same REV.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
 [Insert Hex Key here]<a href="#section-9.3.2-1.5.1" class="pilcrow">¶</a></p>
 </li>
           </ul>
+</section>
+</div>
+<div id="cryptocurrency-wallet-application-profile-test-vectors">
+<section id="section-9.3.3">
+          <h4 id="name-94-cryptocurrency-wallet-ap">
+<a href="#section-9.3.3" class="section-number selfRef">9.3.3. </a><a href="#name-94-cryptocurrency-wallet-ap" class="section-name selfRef">9.4. Cryptocurrency Wallet Application Profile Test Vectors</a>
+          </h4>
+<p id="section-9.3.3-1">This section defines test vectors for the <strong>ACEGF Cryptocurrency Wallet
+Application Profile</strong>.<a href="#section-9.3.3-1" class="pilcrow">¶</a></p>
+<p id="section-9.3.3-2">These test vectors are intended to demonstrate the deterministic behavior
+of ACEGF when applied to a multi-chain cryptocurrency wallet context,
+including mnemonic generation, passphrase-based rekeying, identity
+reconstruction ("view"), and migration from legacy wallet mnemonics.<a href="#section-9.3.3-2" class="pilcrow">¶</a></p>
+<p id="section-9.3.3-3">These vectors <strong>DO NOT</strong> validate the ACEGF protocol encoding, wire format,
+or generic file representations defined elsewhere in this document.
+Instead, they apply exclusively to implementations that claim conformance
+to the wallet application profile.<a href="#section-9.3.3-3" class="pilcrow">¶</a></p>
+<p id="section-9.3.3-4">Implementations that do not support this application profile are not
+required to produce identical results.<a href="#section-9.3.3-4" class="pilcrow">¶</a></p>
+<p id="section-9.3.3-5">The following test vectors are expressed in JSON format for readability
+and ease of cross-platform testing.<a href="#section-9.3.3-5" class="pilcrow">¶</a></p>
+<div class="breakable lang-json sourcecode" id="section-9.3.3-6">
+<pre>
+{
+"description": "ACEGF / MSCIKDF Deterministic Identity Test Vectors V1.0",
+"project_version": "2025.12.23",
+"test_cases": [
+{
+"case_id": "TEST_CASE_001",
+"name": "Initial_Generation_ASCII_Passphrase",
+"description": "Generate a new ACEGF identity using ASCII passphrase 'abc'. Establishes Identity #1.",
+"command": "./acegf generate abc",
+"input": {
+"passphrase": "abc"
+},
+"expected_output": {
+"mnemonic": "vintage crash medal recycle item pigeon error real join december image into toe bag coffee pyramid gorilla tank scrub drift pencil clap vacant unlock",
+"solana": "5yFK8sUGK6Ng5TqENvnLhwHRPDzyTMzLLp5ViUyx2ppk",
+"evm": "0x1aCDA9f78D27e433317de8b14F50bb333df5055e",
+"bitcoin": "bc1pnjptwsfjpukkj4xcw20fm5ddjrfqqquahj34q4lkd6jemxnvs84s5wgs2u",
+"cosmos": "cosmos1kzuju6s08kacthf45vd3raexjfuggrx2n9y6aq",
+"polkadot": "16VnAyYpbPgnVzS2TEHeZK7LMegJ8dTDez68KUbrsS3D2thU",
+"xidentity": "ZgjpfHPPDtpT0vHezh5inQW/ruBmDQTDuNMyrCWLzhw="
+}
+},
+{
+"case_id": "TEST_CASE_002",
+"name": "View_Deterministic_Restore_ASCII",
+"description": "Restore Identity #1 using the original mnemonic and passphrase 'abc'. Must deterministically match TEST_CASE_001.",
+"command": "./acegf view abc [mnemonic]",
+"input": {
+"passphrase": "abc",
+"mnemonic": "vintage crash medal recycle item pigeon error real join december image into toe bag coffee pyramid gorilla tank scrub drift pencil clap vacant unlock"
+},
+"expected_output_ref": "TEST_CASE_001"
+},
+{
+"case_id": "TEST_CASE_003",
+"name": "Rekey_ASCII_to_ASCII",
+"description": "Rekey Identity #1 by changing passphrase from 'abc' to 'cde'.",
+"command": "./acegf rekey abc cde [mnemonic]",
+"input": {
+"old_passphrase": "abc",
+"new_passphrase": "cde",
+"old_mnemonic": "vintage crash medal recycle item pigeon error real join december image into toe bag coffee pyramid gorilla tank scrub drift pencil clap vacant unlock"
+},
+"expected_output": {
+"new_mnemonic": "stuff roast enable clown casual crazy swing sun spoil home derive ocean screen frog shoot devote memory fall chuckle float canvas blue sudden quick"
+}
+},
+{
+"case_id": "TEST_CASE_004",
+"name": "View_After_Rekey_ASCII",
+"description": "Restore Identity #1 using new mnemonic and new passphrase 'cde'. Addresses must match TEST_CASE_001.",
+"command": "./acegf view cde [new_mnemonic]",
+"input": {
+"passphrase": "cde",
+"mnemonic": "stuff roast enable clown casual crazy swing sun spoil home derive ocean screen frog shoot devote memory fall chuckle float canvas blue sudden quick"
+},
+"expected_output_ref": "TEST_CASE_001"
+},
+{
+"case_id": "TEST_CASE_005",
+"name": "Legacy_12_Word_Aceize",
+"description": "Convert a legacy 12-word mnemonic into an ACEGF identity using passphrase 'abc'.",
+"command": "./acegf aceize abc [12-word mnemonic]",
+"input": {
+"passphrase": "abc",
+"legacy_mnemonic": "figure pony hour transfer toilet blush easy sorry taste write swing neck"
+},
+"expected_output": {
+"mnemonic": "language issue crash subject warm when step shadow two live fantasy cake crush key calm cabbage ready error sure idea dish rotate drama balance",
+"solana": "p9vabuSUkrntQwDNiA7X2xaiaBkwFn2SxJdmAFdHgKd",
+"evm": "0xe21AA588aEFA0AE391798A122f0994E9eD9406E5",
+"bitcoin": "bc1pet90lyvvca05c4zhme6925zr2kgdwjj564nm8kqhf758gvgp9fvs6px5g7",
+"cosmos": "cosmos1zvtxtz5vh500rh0k0n3laeh6z0t263yp8krl80",
+"polkadot": "132SUNr7yrVqTMYYACtHQSz9RCR1Pkw126BkF5PGdW892LoV",
+"xidentity": "DUZt+nGZE1ZpGJhW0MYdtibPQcEBKXMHYkZW5phnoTo="
+}
+},
+{
+"case_id": "TEST_CASE_006",
+"name": "Unicode_Passphrase_Emoji",
+"description": "Rekey identity using emoji passphrase. Tests UTF-8 and non-ASCII passphrase handling.",
+"command": "./acegf rekey cde 🔥🔥 [mnemonic]",
+"input": {
+"old_passphrase": "cde",
+"new_passphrase": "🔥🔥",
+"old_mnemonic": "mushroom unusual extend belt torch sketch limb symbol invest fury dinner fly capital you love school logic banana mention wrist buffalo spike finger elite"
+},
+"expected_output": {
+"new_mnemonic": "rabbit thing indoor flower brass blush distance sauce swear ramp guard decorate news girl belt kid embody spoil skate alone suit record park wisdom"
+}
+},
+{
+"case_id": "TEST_CASE_007",
+"name": "Unicode_Passphrase_Chinese",
+"description": "Rekey identity using Chinese UTF-8 passphrase '测试'.",
+"command": "./acegf rekey 🔥🔥 测试 [mnemonic]",
+"input": {
+"old_passphrase": "🔥🔥",
+"new_passphrase": "测试",
+"old_mnemonic": "rabbit thing indoor flower brass blush distance sauce swear ramp guard decorate news girl belt kid embody spoil skate alone suit record park wisdom"
+},
+"expected_output": {
+"new_mnemonic": "deliver truck spread mask fetch connect cute credit cigar garlic student forest decade exchange swap issue wage gauge eagle soup squirrel cash dog whale"
+}
+},
+{
+"case_id": "TEST_CASE_008",
+"name": "View_After_Multi_Rekey_Unicode",
+"description": "Restore identity after multiple rekey operations with Unicode passphrases. Addresses must remain invariant.",
+"command": "./acegf view 测试 [mnemonic]",
+"input": {
+"passphrase": "测试",
+"mnemonic": "deliver truck spread mask fetch connect cute credit cigar garlic student forest decade exchange swap issue wage gauge eagle soup squirrel cash dog whale"
+},
+"expected_output_ref": "TEST_CASE_005"
+}
+]
+}
+
+</pre><a href="#section-9.3.3-6" class="pilcrow">¶</a>
+</div>
+<p id="section-9.3.3-7">Implementations that claim conformance to the ACEGF Cryptocurrency Wallet
+Application Profile SHOULD produce identical results for the test vectors
+defined in this section when provided with the same input parameters.<a href="#section-9.3.3-7" class="pilcrow">¶</a></p>
 </section>
 </div>
 </section>
