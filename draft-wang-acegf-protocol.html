@@ -8,20 +8,20 @@
 <meta content="Jian Sheng Wang" name="author">
 <meta content="
        This document specifies the Atomic Context-Encoded Generation Framework
-(ACEGF), a cryptographic construction for deriving and reconstructing
+(ACE-GF), a cryptographic construction for deriving and reconstructing
 stable digital identities from user-held credentials without requiring
 persistent storage of a master secret. 
-       ACEGF addresses a structural limitation of existing deterministic
+       ACE-GF addresses a structural limitation of existing deterministic
 key-derivation and identity systems, which rely on long-lived root
 secrets and rigid derivation hierarchies.  By separating identity
-reconstruction from long-term secret storage, ACEGF enables stateless
+reconstruction from long-term secret storage, ACE-GF enables stateless
 identity recovery, credential rekeying, and context-isolated derivation
 across multiple cryptographic algorithms. 
        The framework is designed to be application-agnostic and may be applied
 to diverse environments such as authentication systems, distributed
 identities, secure key management, and cryptographic wallets.  This
 document defines the core construction, security properties, and
-interoperability considerations of ACEGF, while application-specific
+interoperability considerations of ACE-GF, while application-specific
 profiles are defined separately. 
     " name="description">
 <meta content="xml2rfc 3.31.0" name="generator">
@@ -1061,7 +1061,7 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <table class="ears">
 <thead><tr>
 <td class="left">Internet-Draft</td>
-<td class="center">ACEGF</td>
+<td class="center">ACE-GF</td>
 <td class="right">December 2025</td>
 </tr></thead>
 <tfoot><tr>
@@ -1098,20 +1098,20 @@ svg :is([fill="white"], [fill^="#fff"]) {
 <section id="section-abstract">
       <h2 id="abstract"><a href="#abstract" class="selfRef">Abstract</a></h2>
 <p id="section-abstract-1">This document specifies the Atomic Context-Encoded Generation Framework
-(ACEGF), a cryptographic construction for deriving and reconstructing
+(ACE-GF), a cryptographic construction for deriving and reconstructing
 stable digital identities from user-held credentials without requiring
 persistent storage of a master secret.<a href="#section-abstract-1" class="pilcrow">¶</a></p>
-<p id="section-abstract-2">ACEGF addresses a structural limitation of existing deterministic
+<p id="section-abstract-2">ACE-GF addresses a structural limitation of existing deterministic
 key-derivation and identity systems, which rely on long-lived root
 secrets and rigid derivation hierarchies.  By separating identity
-reconstruction from long-term secret storage, ACEGF enables stateless
+reconstruction from long-term secret storage, ACE-GF enables stateless
 identity recovery, credential rekeying, and context-isolated derivation
 across multiple cryptographic algorithms.<a href="#section-abstract-2" class="pilcrow">¶</a></p>
 <p id="section-abstract-3">The framework is designed to be application-agnostic and may be applied
 to diverse environments such as authentication systems, distributed
 identities, secure key management, and cryptographic wallets.  This
 document defines the core construction, security properties, and
-interoperability considerations of ACEGF, while application-specific
+interoperability considerations of ACE-GF, while application-specific
 profiles are defined separately.<a href="#section-abstract-3" class="pilcrow">¶</a></p>
 </section>
 <section class="note rfcEditorRemove" id="section-note.1">
@@ -1433,9 +1433,9 @@ across algorithms (e.g., Ed25519, PQC) using explicit
         </h3>
 <p id="section-1.3-1">The following terms are used throughout this document:<a href="#section-1.3-1" class="pilcrow">¶</a></p>
 <span class="break"></span><dl class="dlParallel" id="section-1.3-2">
-          <dt id="section-1.3-2.1"><strong>ACEGF</strong></dt>
+          <dt id="section-1.3-2.1"><strong>ACE-GF</strong></dt>
           <dd style="margin-left: 1.5em" id="section-1.3-2.2">
-            <p id="section-1.3-2.2.1">Atomic Context-Encoded Generation Framework. A cryptographic framework
+            <p id="section-1.3-2.2.1">Atomic Cryptographic Entity Generative Framework. A cryptographic framework
 that enables deterministic reconstruction of digital identities from
 user-held credentials without requiring persistent storage of a master
 secret.<a href="#section-1.3-2.2.1" class="pilcrow">¶</a></p>
@@ -1443,7 +1443,7 @@ secret.<a href="#section-1.3-2.2.1" class="pilcrow">¶</a></p>
           <dd class="break"></dd>
 <dt id="section-1.3-2.3"><strong>Credential</strong></dt>
           <dd style="margin-left: 1.5em" id="section-1.3-2.4">
-            <p id="section-1.3-2.4.1">A user-provided secret input to ACEGF, such as a passphrase, mnemonic,
+            <p id="section-1.3-2.4.1">A user-provided secret input to ACE-GF, such as a passphrase, mnemonic,
 or other high-entropy material. Credentials are supplied at the time of
 identity reconstruction and are not persistently stored by the
 framework.<a href="#section-1.3-2.4.1" class="pilcrow">¶</a></p>
@@ -1451,15 +1451,15 @@ framework.<a href="#section-1.3-2.4.1" class="pilcrow">¶</a></p>
           <dd class="break"></dd>
 <dt id="section-1.3-2.5"><strong>Identity</strong></dt>
           <dd style="margin-left: 1.5em" id="section-1.3-2.6">
-            <p id="section-1.3-2.6.1">A stable cryptographic identity derived via ACEGF. An identity may
+            <p id="section-1.3-2.6.1">A stable cryptographic identity derived via ACE-GF. An identity may
 correspond to one or more public/private key pairs, addresses, or
-identifiers, depending on the application context in which ACEGF is
+identifiers, depending on the application context in which ACE-GF is
 applied.<a href="#section-1.3-2.6.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-1.3-2.7"><strong>Context</strong></dt>
           <dd style="margin-left: 1.5em" id="section-1.3-2.8">
-            <p id="section-1.3-2.8.1">An explicit domain-separation parameter used by ACEGF to ensure that
+            <p id="section-1.3-2.8.1">An explicit domain-separation parameter used by ACE-GF to ensure that
 derived material for different purposes, algorithms, or applications
 remains cryptographically isolated.<a href="#section-1.3-2.8.1" class="pilcrow">¶</a></p>
 </dd>
@@ -1467,25 +1467,25 @@ remains cryptographically isolated.<a href="#section-1.3-2.8.1" class="pilcrow">
 <dt id="section-1.3-2.9"><strong>Rekeying</strong></dt>
           <dd style="margin-left: 1.5em" id="section-1.3-2.10">
             <p id="section-1.3-2.10.1">The process of changing credentials associated with an existing
-identity while preserving the underlying identity semantics. In ACEGF,
+identity while preserving the underlying identity semantics. In ACE-GF,
 rekeying does not require persistent state or regeneration of the
 identity.<a href="#section-1.3-2.10.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-1.3-2.11"><strong>Profile</strong></dt>
           <dd style="margin-left: 1.5em" id="section-1.3-2.12">
-            <p id="section-1.3-2.12.1">A specification that defines how ACEGF is applied within a specific
+            <p id="section-1.3-2.12.1">A specification that defines how ACE-GF is applied within a specific
 application domain. Profiles may impose additional constraints,
-parameters, or output formats, but do not modify the core ACEGF
+parameters, or output formats, but do not modify the core ACE-GF
 construction defined in this document.<a href="#section-1.3-2.12.1" class="pilcrow">¶</a></p>
 </dd>
           <dd class="break"></dd>
 <dt id="section-1.3-2.13"><strong>Wallet Application Profile</strong></dt>
           <dd style="margin-left: 1.5em" id="section-1.3-2.14">
-            <p id="section-1.3-2.14.1">An application profile that applies ACEGF to cryptocurrency wallet
+            <p id="section-1.3-2.14.1">An application profile that applies ACE-GF to cryptocurrency wallet
 systems, including multi-algorithm key derivation and migration from
 legacy wallet formats. This profile is illustrative and does not
-constrain other applications of ACEGF.<a href="#section-1.3-2.14.1" class="pilcrow">¶</a></p>
+constrain other applications of ACE-GF.<a href="#section-1.3-2.14.1" class="pilcrow">¶</a></p>
 </dd>
         <dd class="break"></dd>
 </dl>
@@ -2537,13 +2537,13 @@ the same REV.<a href="#section-9.3-1" class="pilcrow">¶</a></p>
         <h3 id="name-cryptocurrency-wallet-appli">
 <a href="#section-9.4" class="section-number selfRef">9.4. </a><a href="#name-cryptocurrency-wallet-appli" class="section-name selfRef">Cryptocurrency Wallet Application Profile Test Vectors</a>
         </h3>
-<p id="section-9.4-1">This section defines test vectors for the <strong>ACEGF Cryptocurrency Wallet
+<p id="section-9.4-1">This section defines test vectors for the <strong>ACE-GF Cryptocurrency Wallet
 Application Profile</strong>.<a href="#section-9.4-1" class="pilcrow">¶</a></p>
 <p id="section-9.4-2">These test vectors are intended to demonstrate the deterministic behavior
-of ACEGF when applied to a multi-chain cryptocurrency wallet context,
+of ACE-GF when applied to a multi-chain cryptocurrency wallet context,
 including mnemonic generation, passphrase-based rekeying, identity
 reconstruction ("view"), and migration from legacy wallet mnemonics.<a href="#section-9.4-2" class="pilcrow">¶</a></p>
-<p id="section-9.4-3">These vectors <strong>DO NOT</strong> validate the ACEGF protocol encoding, wire format,
+<p id="section-9.4-3">These vectors <strong>DO NOT</strong> validate the ACE-GF protocol encoding, wire format,
 or generic file representations defined elsewhere in this document.
 Instead, they apply exclusively to implementations that claim conformance
 to the wallet application profile.<a href="#section-9.4-3" class="pilcrow">¶</a></p>
@@ -2554,13 +2554,13 @@ and ease of cross-platform testing.<a href="#section-9.4-5" class="pilcrow">¶</
 <div class="breakable lang-json sourcecode" id="section-9.4-6">
 <pre>
 {
-"description": "ACEGF Deterministic Identity Test Vectors V1.0",
+"description": "ACE-GF Deterministic Identity Test Vectors V1.0",
 "project_version": "2025.12.23",
 "test_cases": [
 {
 "case_id": "TEST_CASE_001",
 "name": "Initial_Generation_ASCII_Passphrase",
-"description": "Generate a new ACEGF identity using ASCII passphrase 'abc'. Establishes Identity #1.",
+"description": "Generate a new ACE-GF identity using ASCII passphrase 'abc'. Establishes Identity #1.",
 "command": "./acegf generate abc",
 "input": {
 "passphrase": "abc"
@@ -2614,7 +2614,7 @@ and ease of cross-platform testing.<a href="#section-9.4-5" class="pilcrow">¶</
 {
 "case_id": "TEST_CASE_005",
 "name": "Legacy_12_Word_Aceize",
-"description": "Convert a legacy 12-word mnemonic into an ACEGF identity using passphrase 'abc'.",
+"description": "Convert a legacy 12-word mnemonic into an ACE-GF identity using passphrase 'abc'.",
 "command": "./acegf aceize abc [12-word mnemonic]",
 "input": {
 "passphrase": "abc",
@@ -2674,7 +2674,7 @@ and ease of cross-platform testing.<a href="#section-9.4-5" class="pilcrow">¶</
 
 </pre><a href="#section-9.4-6" class="pilcrow">¶</a>
 </div>
-<p id="section-9.4-7">Implementations that claim conformance to the ACEGF Cryptocurrency Wallet
+<p id="section-9.4-7">Implementations that claim conformance to the ACE-GF Cryptocurrency Wallet
 Application Profile SHOULD produce identical results for the test vectors
 defined in this section when provided with the same input parameters.<a href="#section-9.4-7" class="pilcrow">¶</a></p>
 </section>
