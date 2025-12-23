@@ -153,11 +153,11 @@ of the Root Entropy Value (REV).
 * **Misuse Resistance**: AES-GCM-SIV is selected for its Synthetic
 Initialization Vector (SIV) properties. In the specific context of
 ACE-GF, given that the REV is a 256-bit high-entropy random value,
-using a fixed 96-bit all-zero nonce (N_fixed) is safe under the 
+using a fixed 96-bit all-zero nonce (N_fixed) is safe under the
 assumption that the plaintext (REV) is a uniformly random,
-high-entropy value and that the sealing key is not reused for 
-arbitrary plaintexts. This assumption holds exclusively for the 
-sealing of REV values and MUST NOT be generalized to arbitrary data 
+high-entropy value and that the sealing key is not reused for
+arbitrary plaintexts. This assumption holds exclusively for the
+sealing of REV values and MUST NOT be generalized to arbitrary data
 encryption use cases.
 * **Security Assurance**: The use of AES-GCM-SIV prevents confidentiality
 leaks even in cases of nonce reuse, eliminating the dependency on
@@ -429,8 +429,8 @@ cryptographic primitives and the rigor of the implementation environment.
 The security of the Sealed Artifact (SA) is directly proportional to the
 entropy of the Authorization Credential (Cred).
 
-1.  **Minimum Entropy**: Human-provided credentials SHOULD be long, randomly 
-generated passphrases managed by password managers. Machine-generated 
+1.  **Minimum Entropy**: Human-provided credentials SHOULD be long, randomly
+generated passphrases managed by password managers. Machine-generated
 credentials MUST provide at least 128 bits of entropy.
 2.  **Entropy Stretching**: While Argon2id provides significant resistance
 against brute-force, it cannot compensate for extremely weak secrets
