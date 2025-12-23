@@ -173,8 +173,12 @@ of the Root Entropy Value (REV).
 * **Misuse Resistance**: AES-GCM-SIV is selected for its Synthetic
 Initialization Vector (SIV) properties. In the specific context of
 ACE-GF, given that the REV is a 256-bit high-entropy random value,
-using a fixed 96-bit all-zero nonce (N_fixed) is mathematically
-secure.
+using a fixed 96-bit all-zero nonce (N_fixed) is safe under the 
+assumption that the plaintext (REV) is a uniformly random,
+high-entropy value and that the sealing key is not reused for 
+arbitrary plaintexts. This assumption holds exclusively for the 
+sealing of REV values and MUST NOT be generalized to arbitrary data 
+encryption use cases.
 * **Security Assurance**: The use of AES-GCM-SIV prevents confidentiality
 leaks even in cases of nonce reuse, eliminating the dependency on
 high-fidelity hardware Random Number Generators (RNG) during every
@@ -278,12 +282,36 @@ being used as the 'info' parameter in HKDF.
 
 The derivation follows the HKDF-SHA256 Extract-and-Expand logic:
 1.  `PRK = HKDF-Extract(Salt=0, IKM=REV)`
-2.  `DerivedKey = HKDF-Expand(PRK, info=Ctx, L=KeyLength)`
+2.  `DerivedKey = HKDF-Expand(PRK, info=Ctx, output_length)`
+
+Given that the REV is a uniformly random 256-bit value, a zero-length salt
+is sufficient for HKDF-Extract; implementations MAY alternatively use a
+fixed protocol-specific salt string for explicit domain separation.
 
 By including the AlgID and Domain in the 'info' parameter, the
 framework guarantees that a compromise of one DerivedKey provides
 no computational advantage in recovering the REV or any other
 DerivedKey associated with a different Ctx.
+
+### Algorithm-Specific Key Material Mapping
+
+The output of HKDF-Expand (`DerivedKey`) MUST be mapped to algorithm-specific
+key material according to the requirements of the target algorithm.
+
+* **Ed25519**: The 32-byte `DerivedKey` MUST be used as the Ed25519 private key
+seed as specified in RFC 8032.
+
+* **X25519**: The `DerivedKey` MUST be interpreted as a 32-byte scalar and
+clamped as specified in RFC 7748.
+
+* **secp256k1 (ECDSA)**: The `DerivedKey` MUST be interpreted as a big-endian
+integer and reduced modulo the curve order. If the resulting value is zero,
+the implementation MUST re-derive key material using an incremented internal
+counter.
+
+* **ML-DSA (Dilithium)** and **ML-KEM (Kyber)**: The `DerivedKey` MUST be used
+as deterministic seed input to the key generation procedures defined in
+FIPS 204 and FIPS 203, respectively.
 
 # Data Structures and Encodings
 
@@ -421,8 +449,9 @@ cryptographic primitives and the rigor of the implementation environment.
 The security of the Sealed Artifact (SA) is directly proportional to the
 entropy of the Authorization Credential (Cred).
 
-1.  **Minimum Entropy**: Credentials SHOULD possess at least 128 bits of
-entropy to resist sophisticated offline attacks.
+1.  **Minimum Entropy**: Human-provided credentials SHOULD be long, randomly 
+generated passphrases managed by password managers. Machine-generated 
+credentials MUST provide at least 128 bits of entropy.
 2.  **Entropy Stretching**: While Argon2id provides significant resistance
 against brute-force, it cannot compensate for extremely weak secrets
 (e.g., short, common passwords).
@@ -489,7 +518,11 @@ derivation will inherently produce unique sub-keys for the underlying
 CTR mode, preventing the catastrophic key-stream reuse associated
 with standard AES-GCM.
 
+
 # IANA Considerations
+
+This section describes a proposed registry structure. Creation of IANA
+registries is contingent on the publication status of this document.
 
 This document requests IANA to create two new registries for the Atomic
 Cryptographic Entity Generative Framework (ACE-GF).
