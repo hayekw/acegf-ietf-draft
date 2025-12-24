@@ -4,8 +4,8 @@
 
 Network Working Group                                         J. S. Wang
 Internet-Draft                                    Independent Researcher
-Intended status: Informational                          23 December 2025
-Expires: 26 June 2026
+Intended status: Informational                          24 December 2025
+Expires: 27 June 2026
 
 
     ACE-GF: A Generative Framework for Atomic Cryptographic Entities
@@ -13,7 +13,7 @@ Expires: 26 June 2026
 
 Abstract
 
-   This document specifies the Atomic Context-Encoded Generation
+   This document specifies the Atomic Cryptographic Entity Generative
    Framework (ACE-GF), a cryptographic construction for deriving and
    reconstructing stable digital identities from user-held credentials
    without requiring persistent storage of a master secret.
@@ -54,7 +54,7 @@ Status of This Memo
    time.  It is inappropriate to use Internet-Drafts as reference
    material or to cite them other than as "work in progress."
 
-   This Internet-Draft will expire on 26 June 2026.
+   This Internet-Draft will expire on 27 June 2026.
 
 Copyright Notice
 
