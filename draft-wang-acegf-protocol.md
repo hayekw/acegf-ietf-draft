@@ -157,22 +157,22 @@ cryptographic algorithms. It defines the *substance* of the identity.
 The following diagram illustrates how entropy flows from a raw state,
 through the authorization lock, and into algorithm-specific keys:
 
-```text
-Authorization Pipeline            Identity Pipeline
-----------------------            -----------------
-[Credential] + [Salt]
-      |
-      v
-  Argon2id (KDF1)
-      |
-      v
-  K_seal (Symmetric)             Derivation Context (Ctx)
-      |                               |
-      v                               v
-  AEAD-Decrypt(SA, K_seal) ----> [ REV ] ----> HKDF-Expand (KDF2)
-                                      |
-                                      v
-                         [ Algorithm-Specific Keys ]
+    Authorization Pipeline            Identity Pipeline
+    ----------------------            -----------------
+    [Credential] + [Salt]
+          |
+          v
+      Argon2id (KDF1)
+          |
+          v
+      K_seal (Symmetric)             Derivation Context (Ctx)
+          |                               |
+          |                               v
+    AEAD-Decrypt(SA, K_seal) ----> [  REV  ] ----> HKDF-Expand (KDF2)
+                                          |
+                                          v
+                               [ Algorithm-Specific Keys ]
+
 
 ## Atomic Entity Lifecycle and States
 
@@ -180,6 +180,7 @@ The lifecycle of an ACE is defined by the availability and reachability
 of the Root Entropy Value (REV).
 
 ### Operational States
+
 | State | Description | Persistence |
 | :--- | :--- | :--- |
 | **Sealed** | The REV is encrypted within a Sealed Artifact (SA). | Persistent (Disk/Storage) |
@@ -198,8 +199,6 @@ Credential to decrypt the SA, restoring the REV to RAM.
 (e.g., Ed25519, ML-DSA).
 5.  **Zeroize**: Once complete, the REV and all derived material are
 wiped from RAM.
-
-
 
 ## 2.4. Core Operations: Rekeying and Revocation
 
@@ -220,23 +219,22 @@ without requiring external revocation lists (CRLs).
 The following sequence describes the typical interaction between an
 application ("Caller") and an ACE-GF implementation:
 
-```text
-Caller                         ACE-GF Implementation
-|                                     |
-|-- 1. generate_rev() --------------->| (Samples CSPRNG)
-|<-- [REV in RAM] --------------------|
-|                                     |
-|-- 2. seal_rev(REV, Cred) ---------->| (Argon2id + AES-GCM-SIV)
-|<-- [Sealed Artifact (SA)] ----------| (Store to disk)
-|                                     |
-|-- 3. zeroize_memory() ------------->| (Wipe RAM)
-|                                     |
-| ... later (identity usage) ...      |
-|                                     |
-|-- 4. unseal_rev(SA, Cred) --------->| (Reconstructs REV in RAM)
-|-- 5. derive_key(REV, Ctx) ---------->| (HKDF-SHA256)
-|<-- [Derived Key Material] ----------|
-|-- 6. zeroize_memory() ------------->| (Wipe RAM)
+    Caller                         ACE-GF Implementation
+      |                                     |
+      |----- 1. generate_rev() ------------>| (Samples CSPRNG)
+      |<------ [REV in RAM] ----------------|
+      |                                     |
+      |----- 2. seal_rev(REV, Cred) ------->| (Argon2id + AES-GCM-SIV)
+      |<----- [Sealed Artifact (SA)] -------| (Store to disk)
+      |                                     |
+      |----- 3. zeroize_memory() ---------->| (Wipe RAM)
+      |                                     |
+      | ... later (identity usage) ...      |
+      |                                     |
+      |----- 4. unseal_rev(SA, Cred) ------>| (Reconstructs REV in RAM)
+      |----- 5. derive_key(REV, Ctx) ------>| (HKDF-SHA256)
+      |<----- [Derived Key Material] -------|
+      |----- 6. zeroize_memory() ---------->| (Wipe RAM)
 
 # Architecture and Design Principles
 
@@ -324,109 +322,159 @@ to maintain cross-platform interoperability.
 
 ## Root Entropy Value (REV) Generation
 
-The Root Entropy Value (REV) serves as the atomic foundation of an
-Identity.
+This operation generates the Root Entropy Value (REV), which serves as
+the atomic foundation of an ACE identity.
 
-1.  The REV MUST be a 256-bit (32-byte) value.
-2.  The REV MUST be sampled from a cryptographically secure random
-number generator (CSPRNG) with uniform distribution.
-3.  The REV MUST NOT be stored in persistent storage in its raw form.
-It MUST only exist in volatile memory during active use and SHOULD
-be zeroized immediately after the Sealing or Derivation process.
+### Inputs
+
+- None.
+
+### Outputs
+
+- **REV**: A freshly generated Root Entropy Value.
+- **Error**: On failure.
+
+### Processing Requirements
+
+1. The REV MUST be a 256-bit (32-byte) value.
+2. The REV MUST be sampled from a cryptographically secure random number
+generator (CSPRNG) with uniform distribution.
+3. The REV MUST NOT be stored in persistent storage in plaintext form.
+It MUST exist only in volatile memory during active use.
+
+### Error Conditions
+
+- **EntropyUnavailable**: A suitable CSPRNG is not available or fails
+to produce sufficient entropy.
+
+### Error Handling Requirements
+
+If REV generation fails, implementations MUST return an error and MUST
+NOT proceed with any sealing or derivation operations.
 
 ## Sealing Process (Seal)
 
-The Sealing process transforms the REV into a persistent Sealed
-Artifact (SA) using an Authorization Credential.
+The Sealing process transforms a Root Entropy Value (REV) into a
+persistent Sealed Artifact (SA) using an Authorization Credential.
 
-### Sealing Key Derivation (K_seal)
+### Inputs
 
-To derive the symmetric sealing key:
-1.  Generate or retrieve a 128-bit random Salt.
-2.  Input the user Credential, Salt, and selected Sealing Profile
-parameters into the Argon2id function.
-3.  The output MUST be a 256-bit key, designated as K_seal.
+- **REV**: The Root Entropy Value to be protected.
+- **Authorization Credential (Cred)**: Secret material used to derive
+the sealing key.
+- **Sealing Profile**: Identifies the Argon2id parameters to be used.
 
-### Deterministic Encryption Steps (N_fixed)
+### Outputs
 
-Once K_seal is derived, the REV is encrypted as follows:
-1.  **Algorithm**: AES-256-GCM-SIV.
-2.  **Nonce (N_fixed)**: A fixed 96-bit (12-byte) all-zero value.
-The use of a fixed nonce is permitted here because the REV
-itself provides the necessary entropy for the SIV construction.
-3.  **Operation**: Encrypt the REV using K_seal and N_fixed.
-4.  **Output**: A 256-bit Ciphertext and a 128-bit Authentication Tag.
+- **Sealed Artifact (SA)**: A serialized artifact containing the
+encrypted REV and associated metadata.
+- **Error**: On failure.
 
-The resulting **Sealed Artifact (SA)** is the concatenation of:
-`Version || ProfileID || Salt || Ciphertext || Tag`
+### Processing Steps
+
+1. Generate or select a 128-bit random Salt.
+2. Derive the sealing key `K_seal` using Argon2id with the provided
+Credential, Salt, and parameters defined by the selected Sealing
+Profile.
+3. Encrypt the REV using AES-256-GCM-SIV with `K_seal` and the fixed
+nonce `N_fixed`.
+4. Construct the Sealed Artifact (SA) by concatenating the Version,
+ProfileID, Salt, Ciphertext, and Authentication Tag.
+5. Zeroize the REV from volatile memory after successful sealing.
+
+### Error Conditions
+
+- **InvalidREV**: The supplied REV does not meet length or format
+requirements.
+- **ProfileUnsupported**: The specified Sealing Profile is not supported.
+- **SealingFailure**: Encryption or key derivation fails.
+
+### Error Handling Requirements
+
+If sealing fails, implementations MUST return an error and MUST ensure
+that the REV and any intermediate key material are not retained in
+memory.
 
 ## Unsealing Process (Unseal)
 
-The Unsealing process reconstructs the REV from a provided SA and Credential.
+The Unsealing process reconstructs the Root Entropy Value (REV) from a
+provided Sealed Artifact (SA) and Authorization Credential.
 
-1.  **Parse**: Extract the Version, ProfileID, Salt, Ciphertext, and
-Tag from the SA.
-2.  **Derive**: Recompute K_seal using the Credential, Salt, and the
-parameters defined by the ProfileID.
-3.  **Decrypt**: Execute AES-256-GCM-SIV decryption on the Ciphertext
-using K_seal, N_fixed, and the Tag.
-4.  **Failure Handling**: If the authentication tag verification fails,
-the implementation MUST return an error and MUST NOT release any
-part of the decrypted data. The process SHOULD include a
-protection mechanism against timing attacks.
+### Inputs
+
+- **Sealed Artifact (SA)**: A serialized artifact containing the encrypted
+REV and associated metadata.
+- **Authorization Credential (Cred)**: User- or system-provided secret
+material required to derive the sealing key.
+
+### Outputs
+
+- **REV**: The reconstructed Root Entropy Value, on success.
+- **Error**: On failure.
+
+### Processing Steps
+
+1. **Parse**: Extract the Version, ProfileID, Salt, Ciphertext, and
+Authentication Tag from the SA.
+2. **Derive**: Recompute the sealing key `K_seal` using the provided
+Credential, extracted Salt, and the parameters associated with the
+ProfileID.
+3. **Decrypt**: Execute AES-256-GCM-SIV decryption on the Ciphertext using
+`K_seal`, the fixed nonce `N_fixed`, and the Authentication Tag.
+
+### Error Conditions
+
+- **AuthenticationFailure**: Authentication tag verification fails.
+- **InvalidFormat**: The SA cannot be parsed or contains unsupported
+version or profile identifiers.
+- **ProfileUnsupported**: The referenced ProfileID is not implemented.
+
+### Error Handling Requirements
+
+If any error occurs, implementations MUST return an error and MUST NOT
+release any portion of the decrypted REV. Implementations SHOULD ensure
+that error handling does not introduce observable timing differences
+that could leak information about the Credential or `K_seal`.
 
 ## Key Derivation Function (Derive)
 
-The Derive function generates application-specific keys from the REV.
+The Derive operation deterministically produces algorithm-specific
+cryptographic key material from a reconstructed Root Entropy Value (REV).
 
-### Context Tuple Structure
+### Inputs
 
-To ensure deterministic and isolated derivation, a structured
-**Context Tuple (Ctx)** is defined:
+- **REV**: The reconstructed Root Entropy Value.
+- **Context Tuple (Ctx)**: A structured context specifying algorithm,
+usage domain, and key index.
+- **Output Length**: The required length of derived key material.
 
-* **AlgID (16-bit)**: Identifies the target algorithm (e.g., Ed25519).
-* **Domain (8-bit)**: Specifies the usage domain (e.g., 0x01 for
-Signing, 0x02 for Encryption).
-* **Index (32-bit)**: An incremental counter allowing for
-virtually unlimited keys per algorithm/domain.
+### Outputs
 
-The Ctx MUST be serialized into a consistent byte string before
-being used as the 'info' parameter in HKDF.
+- **DerivedKey**: Algorithm-specific key material.
+- **Error**: On failure.
 
-### Computational Independence Guarantee
+### Processing Steps
 
-The derivation follows the HKDF-SHA256 Extract-and-Expand logic:
-1.  `PRK = HKDF-Extract(Salt=0, IKM=REV)`
-2.  `DerivedKey = HKDF-Expand(PRK, info=Ctx, output_length)`
+1. Perform HKDF-Extract using the REV as input key material to produce a
+pseudorandom key (PRK).
+2. Perform HKDF-Expand using the PRK and the serialized Context Tuple
+(`Ctx`) as the `info` parameter to generate key material of the
+requested length.
+3. Map the derived output to algorithm-specific key material according
+to the target algorithm's requirements.
 
-Given that the REV is a uniformly random 256-bit value, a zero-length salt
-is sufficient for HKDF-Extract; implementations MAY alternatively use a
-fixed protocol-specific salt string for explicit domain separation.
+### Error Conditions
 
-By including the AlgID and Domain in the 'info' parameter, the
-framework guarantees that a compromise of one DerivedKey provides
-no computational advantage in recovering the REV or any other
-DerivedKey associated with a different Ctx.
+- **InvalidContext**: The Context Tuple is malformed or unsupported.
+- **DerivationFailure**: HKDF expansion fails or produces invalid output
+for the target algorithm.
 
-### Algorithm-Specific Key Material Mapping
+### Error Handling Requirements
 
-The output of HKDF-Expand (`DerivedKey`) MUST be mapped to algorithm-specific
-key material according to the requirements of the target algorithm.
-
-* **Ed25519**: The 32-byte `DerivedKey` MUST be used as the Ed25519 private key
-seed as specified in RFC 8032.
-
-* **X25519**: The `DerivedKey` MUST be interpreted as a 32-byte scalar and
-clamped as specified in RFC 7748.
-
-* **secp256k1 (ECDSA)**: The `DerivedKey` MUST be interpreted as a big-endian
-integer and reduced modulo the curve order. If the resulting value is zero,
-the implementation MUST re-derive key material using an incremented internal
-counter.
-
-* **ML-DSA (Dilithium)** and **ML-KEM (Kyber)**: The `DerivedKey` MUST be used
-as deterministic seed input to the key generation procedures defined in
-FIPS 204 and FIPS 203, respectively.
+On failure, implementations MUST return an error and MUST NOT release
+partial or malformed key material. The REV MUST remain protected in
+volatile memory and SHOULD be zeroized once derivation operations are
+complete.
 
 # Data Structures and Encodings
 
@@ -491,52 +539,141 @@ The 8-bit Domain field separates keys by their functional intent:
 * **0x03 (Authentication)**: Challenge-response protocols.
 * **0x04 (Key Wrapping)**: Protecting other sub-keys.
 
-# Identity Lifecycle Operations
+## Context Tuple Encoding
 
-One of the primary advantages of the ACE-GF framework is its ability to manage
-the identity lifecycle without requiring changes to the underlying root
-entropy. This section defines the procedures for credential management and
-migration.
+The Context Tuple (Ctx) is a compact, fixed-length binary structure
+used as the `info` parameter for HKDF expansion. All fields are
+encoded in Big-Endian (Network Byte Order).
+
+### Context Tuple Binary Layout
+
+| Offset | Length | Field   | Description                                  |
+|--------|--------|---------|----------------------------------------------|
+| 0      | 2      | AlgID   | Algorithm Identifier                          |
+| 2      | 1      | Domain  | Usage Domain                                  |
+| 3      | 4      | Index   | Key Index (unsigned integer)                 |
+
+**Total Length: 7 bytes.**
+
+### Encoding Rules
+
+- The AlgID field MUST correspond to a registered value in the
+ACE-GF Context Identifier Registry.
+- The Domain field MUST correspond to a registered Usage Domain.
+- The Index field is an unsigned 32-bit integer and MAY be incremented
+to derive multiple independent keys within the same algorithm and
+domain.
+
+# Operational Considerations and Identity Lifecycle
+
+This section describes operational aspects of deploying and managing
+Atomic Cryptographic Entities (ACEs) using the ACE-GF framework. It
+focuses on lifecycle management, authorization updates, revocation
+semantics, and deployment considerations. This section is informational
+and does not introduce new protocol requirements beyond those specified
+elsewhere in this document.
+
+One of the primary advantages of the ACE-GF framework is its ability to
+manage the full identity lifecycle without requiring changes to the
+underlying Root Entropy Value (REV). Authorization material may be
+updated or revoked independently, while derived cryptographic
+identifiers remain stable as long as the REV remains reachable.
 
 ## Stateless Credential Rotation
 
-Stateless Credential Rotation allows an entity to update its Authorization
-Credential (e.g., changing a password) without altering the Root Entropy
-Value (REV). Because the REV is the source of all derived keys, this
-process ensures that the ACE's identity and all its associated cryptographic
-keys remain stable.
+ACE-GF supports stateless credential rotation, allowing an entity to
+update its Authorization Credential (e.g., changing a password or
+authorization factor) without altering the underlying Root Entropy
+Value (REV).
+
+Because the REV is the sole source of all derived cryptographic keys,
+this process preserves identity continuity. No derived public keys,
+addresses, or identifiers need to be regenerated or re-announced.
 
 The rotation process is performed as follows:
-1.  **Unseal**: Use the current Credential and the existing Sealed
-Artifact (SA) to reconstruct the REV in volatile memory.
-2.  **Generate New Salt**: Sample a new 128-bit random Salt.
-3.  **Re-Seal**: Perform the Sealing Process (as defined in Section 4.2)
-using the *new* Credential and the *new* Salt, while maintaining the
-*same* REV.
-4.  **Commit**: Replace the old SA with the newly generated SA.
 
-This operation is "stateless" from the perspective of the identity
-foundation; no derived keys (e.g., blockchain addresses or SSH keys)
-need to be updated or re-announced to the network.
+1. **Unseal**: Use the current Authorization Credential and the existing
+Sealed Artifact (SA) to reconstruct the REV in volatile memory.
+2. **Generate New Salt**: Sample a new 128-bit random salt value.
+3. **Re-Seal**: Perform the Sealing Process (as defined in Section 4.2)
+using the new Authorization Credential and the new salt, while
+maintaining the same REV.
+4. **Commit**: Replace the previous SA with the newly generated SA.
+
+This operation is stateless with respect to identity semantics. No
+persistent state other than the updated SA is required, and no protocol-
+visible identity attributes are modified.
 
 ## Authorization-Bound Revocation
 
-ACE-GF supports a unique mechanism for immediate revocation by decoupling
-the components required for REV reconstruction.
+ACE-GF enables immediate and intrinsic revocation through
+authorization-bound revocation. Revocation is achieved by rendering the
+REV mathematically unreachable rather than by relying on external
+revocation infrastructure.
 
-In high-security deployments, the Authorization Pipeline can be distributed
-across multiple components (e.g., a user-held password and a server-held
-secret).
+In high-security deployments, the Authorization Pipeline MAY be
+distributed across multiple components, such as a user-held credential
+combined with a server-held secret or policy-controlled input.
 
-1.  **Revocation by Destruction**: To revoke access to an ACE, the
-controlling entity simply destroys the associated Sealed Artifact (SA)
-or the server-held component of the Credential.
-2.  **Immediate Effect**: Without the SA or the specific Credential salt,
-the REV becomes mathematically unreachable.
-3.  **No CRL/OCSP Required**: Unlike traditional certificate-based
-revocation, this is an inherent cryptographic lock. Once the "pathway"
-to the REV is broken, the identity is effectively offline until a
-backup SA (if any) is deployed.
+Revocation may be performed using one or more of the following actions:
+
+1. **Revocation by Destruction**: Destroying the associated Sealed
+Artifact (SA).
+2. **Credential Component Removal**: Removing or invalidating a required
+authorization input (e.g., server-held secret or credential factor).
+
+Once revocation has occurred, reconstruction of the REV becomes
+cryptographically infeasible. As a result:
+
+- No derived keys can be regenerated.
+- No partial identity state is exposed.
+- No external revocation mechanisms (such as CRLs or OCSP) are required.
+
+The identity remains offline until valid authorization inputs are
+restored, such as by deploying a backup SA under the control of the
+authorizing entity.
+
+## Failure Modes and Recovery Considerations
+
+Failure to reconstruct the REV may occur due to incorrect credentials,
+corrupted Sealed Artifacts, unsupported sealing profiles, or intentional
+revocation actions.
+
+Implementations SHOULD treat all unsealing failures as indistinguishable
+from an external observability perspective and MUST NOT leak partial
+information about the REV or derived keys in failure scenarios.
+
+Recovery is possible only if sufficient authorization material remains
+available. Loss of all authorization inputs results in permanent
+unreachability of the REV.
+
+## Storage and Ephemeral State Considerations
+
+The Root Entropy Value (REV) is intended to exist only in volatile memory
+during active operations and MUST NOT be persistently stored.
+
+The Sealed Artifact (SA) is the sole persistent representation required
+to reconstruct an ACE identity. It MAY be stored, transmitted, or backed
+up using conventional storage mechanisms, subject to application-specific
+security policies.
+
+Implementations SHOULD ensure timely zeroization of all sensitive
+material, including the REV, sealing keys, and intermediate buffers,
+after use. Where available, hardware-backed isolation mechanisms such as
+Trusted Execution Environments (TEEs) are RECOMMENDED to reduce exposure
+risk during reconstruction and derivation operations.
+
+## Migration Considerations
+
+Existing cryptographic identities MAY be migrated into the ACE-GF
+framework by treating a legacy high-entropy private key as a Root
+Entropy Value (REV) and sealing it using standard ACE-GF procedures.
+
+Such migrations are OPTIONAL and profile-dependent. Implementations
+SHOULD document any deviations from native ACE-GF derivation semantics
+and SHOULD clearly distinguish between natively generated ACE-GF
+identities and migrated identities when relevant.
+
 
 # Security Considerations
 
@@ -680,11 +817,18 @@ This registry manages the 8-bit Domain field.
 
 # Test Vectors
 
-This section provides test vectors for developers to verify their
-implementations of ACE-GF. All hexadecimal values are represented
-without the '0x' prefix.
+This section defines test vectors intended to verify the correctness
+and interoperability of ACE-GF implementations.
 
-## Basic Test Vector (Standard Profile)
+Unless otherwise stated, the test vectors in Sections 10.1 through
+10.3 define normative behavior for conforming ACE-GF implementations.
+Test vectors associated with specific Application Profiles are
+informational unless explicitly required by that profile.
+
+
+## Basic Protocol Test Vectors
+
+### Standard Sealing Profile
 
 This test case uses the "Standard" Sealing Profile (0x02).
 
@@ -702,7 +846,9 @@ f0e1d2c3b4a5968778695a4b3c2d1e0f00112233445566778899aabbccddeeff
 [Insert 32-byte Hex Ciphertext here]
 [Insert 16-byte Hex Tag here]
 
-## Cross-Platform Consistency (UTF-8 Credentials)
+## Cross-Platform and Encoding Consistency
+
+### UTF-8 Credential Handling
 
 This test case ensures that non-ASCII credentials are handled
 consistently using UTF-8 encoding before the Argon2id process.
@@ -714,7 +860,9 @@ consistently using UTF-8 encoding before the Argon2id process.
 **Output - Reconstructed REV**:
 [Insert 32-byte Hex REV here]
 
-## Multi-Algorithm Derivation (ECC + PQC)
+## Multi-Algorithm and Post-Quantum Derivation
+
+### Classical + PQC Key Derivation from a Single REV
 
 This test case demonstrates the generative nature of the framework by
 deriving keys for both classical and post-quantum algorithms from
@@ -739,7 +887,9 @@ the same REV.
 * **Derived Key (64 bytes)**:
 [Insert Hex Key here]
 
-## Cryptocurrency Wallet Application Profile Test Vectors
+## Application Profile Test Vectors (Informational)
+
+### Cryptocurrency Wallet Application Profile
 
 This section defines test vectors for the **ACE-GF Cryptocurrency Wallet
 Application Profile**.
@@ -882,10 +1032,25 @@ and ease of cross-platform testing.
 
 ~~~
 
-Implementations that claim conformance to the ACE-GF Cryptocurrency Wallet
-Application Profile SHOULD produce identical results for the test vectors
-defined in this section when provided with the same input parameters.
+## 10.5. Interoperability Verification Guidance
 
+An implementation claiming conformance to this specification SHOULD
+verify interoperability as follows:
+
+1. Using the test vectors in Sections 10.1 and 10.2, confirm that:
+- The reconstructed REV exactly matches the expected value.
+- The serialized Sealed Artifact (SA) fields match the specified
+binary layout and contents.
+2. Using the vectors in Section 10.3, confirm that:
+- Derived key material for different algorithms and domains is
+deterministic and context-isolated.
+- Classical and post-quantum derivations can coexist under the same REV.
+3. Implementations supporting the Cryptocurrency Wallet Application
+Profile SHOULD additionally verify conformance using the vectors
+defined in Section 10.4.
+
+Successful verification across independent implementations indicates
+interoperability of the ACE-GF construction.
 
 # References
 
@@ -913,7 +1078,7 @@ defined in this section when provided with the same input parameters.
 
 --- back
 
-# Appendix A. Implementation Considerations for Resource-Constrained Devices
+# Implementation Considerations for Resource-Constrained Devices
 
 For IoT devices with limited RAM that cannot support the 'Standard' Argon2id
 profile (256 MiB), the following optimizations are RECOMMENDED:
@@ -925,30 +1090,104 @@ Sealed Artifact (SA).
 TEE, the K_seal derivation SHOULD be pinned to the hardware UID to
 provide an additional layer of security even if the Credential is weak.
 
-# Appendix B. Python Reference Implementation
+# Python Reference Implementation
 
 A simplified reference implementation of the ACE-GF derivation logic:
 
-```python
-import hashlib
-import hmac
+    import hashlib
+    import hmac
 
-def hkdf_expand(prk, info, length):
-    t = b""
-    okm = b""
-    for i in range((length + 31) // 32):
+    def hkdf_expand(prk, info, length):
+      t = b""
+      okm = b""
+      for i in range((length + 31) // 32):
         t = hmac.new(prk, t + info + bytes([i + 1]), hashlib.sha256).digest()
         okm += t
-    return okm[:length]
+      return okm[:length]
 
-# Example Context Construction
-alg_id = (1).to_bytes(2, 'big')   # Ed25519
-domain = (1).to_bytes(1, 'big')   # Signing
-index  = (0).to_bytes(4, 'big')   # Index 0
-ctx_info = alg_id + domain + index
+    # Example Context Construction
+    alg_id = (1).to_bytes(2, 'big')   # Ed25519
+    domain = (1).to_bytes(1, 'big')   # Signing
+    index  = (0).to_bytes(4, 'big')   # Index 0
+    ctx_info = alg_id + domain + index
 
-# prk = hkdf_extract(salt=0, ikm=REV)
-# derived_key = hkdf_expand(prk, ctx_info, 32)
+    # prk = hkdf_extract(salt=0, ikm=REV)
+    # derived_key = hkdf_expand(prk, ctx_info, 32)
+
+# Example Use Cases (Informational)
+
+This appendix provides illustrative, non-normative examples of how
+the ACE-GF framework may be applied in different deployment contexts.
+These examples are intended to aid understanding and do not impose
+additional protocol requirements.
+
+## Autonomous Digital Entities (ADEs)
+
+Autonomous Digital Entities such as AI agents may require a stable
+cryptographic identity that can be deterministically reconstructed
+across restarts without persistent secret storage.
+
+In such deployments:
+- The Sealed Artifact (SA) may be stored in local or remote storage.
+- Authorization Credentials may be supplied at runtime by a controller
+or policy engine.
+- Derived keys may be used for signing, authentication, or secure
+communication between agents.
+
+## IoT and Embedded Devices
+
+IoT devices often operate under memory and storage constraints and may
+lack secure persistent storage for long-lived secrets.
+
+ACE-GF allows:
+- Off-device provisioning of Sealed Artifacts.
+- On-device reconstruction of identity only when required.
+- Integration with Secure Elements or TEEs where available.
+
+## Blockchain and Cryptographic Wallet Identities
+
+Cryptographic wallets may use ACE-GF to derive multiple algorithm-
+specific keys (e.g., Ed25519, secp256k1, PQC) from a single REV.
+
+Stateless rekeying allows credential updates without changing public
+addresses, while authorization-bound revocation provides a recovery
+and lockout mechanism without external revocation infrastructure.
+
+# Security Boundaries and Trust Assumptions (Informational)
+
+This appendix summarizes the security boundaries and trust assumptions
+implicit in the ACE-GF framework. It is informational and complements
+the Security Considerations section.
+
+## Trust Boundaries
+
+ACE-GF assumes a clear separation between:
+- Authorization inputs (Credentials, salts, policy-controlled inputs)
+- Identity material (REV and derived keys)
+- Persistent storage (Sealed Artifacts)
+
+The compromise of persistent storage alone does not reveal the REV or
+derived keys.
+
+## Authorization Boundary
+
+Authorization Credentials are assumed to be protected by the
+application or deployment environment. Weak credentials reduce the
+effective security of the Sealing Process but do not compromise the
+cryptographic soundness of the framework.
+
+## Execution Environment Assumptions
+
+During unsealing and derivation, the execution environment is assumed
+to provide basic process isolation. Where stronger guarantees are
+required, hardware-backed isolation (e.g., TEEs) is RECOMMENDED.
+
+## Non-Goals
+
+ACE-GF does not attempt to:
+- Protect against fully compromised execution environments.
+- Provide anonymity or unlinkability guarantees.
+- Replace application-level access control or policy enforcement.
 
 --- back
 
