@@ -29,10 +29,10 @@ informative:
 
 --- abstract
 
-This document specifies the Atomic Context-Encoded Generation Framework
-(ACE-GF), a cryptographic construction for deriving and reconstructing
-stable digital identities from user-held credentials without requiring
-persistent storage of a master secret.
+This document specifies the Atomic Cryptographic Entity Generative
+Framework (ACE-GF), a cryptographic construction for deriving and
+reconstructing stable digital identities from user-held credentials
+without requiring persistent storage of a master secret.
 
 ACE-GF addresses a structural limitation of existing deterministic
 key-derivation and identity systems, which rely on long-lived root
@@ -86,10 +86,10 @@ across algorithms (e.g., Ed25519, PQC) using explicit
 The following terms are used throughout this document:
 
 **ACE-GF**
-: Atomic Cryptographic Entity Generative Framework. A cryptographic framework
-that enables deterministic reconstruction of digital identities from
-user-held credentials without requiring persistent storage of a master
-secret.
+: Atomic Cryptographic Entity Generative Framework. A cryptographic
+framework that enables deterministic reconstruction of digital
+identities from user-held credentials without requiring persistent
+storage of a master secret.
 
 **Credential**
 : A user-provided secret input to ACE-GF, such as a passphrase, mnemonic,
