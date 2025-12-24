@@ -74,14 +74,13 @@ Table of Contents
      1.2.  Core Contributions
      1.3.  Conventions and Terminology
    2.  Protocol Overview
-     2.1.  Atomic Cryptographic Entity Lifecycle
-     2.2.  High-Level Authorization and Identity Flow
-       2.2.1.  Protocol Message Exchange Diagram (Local Call Sequence)
-     2.3.  Revocation and Rekeying at a Glance
-       2.3.1.  State Transition Overview (Informational)
-     2.4.  Rekeying Path (Authorization Update)
-     2.5.  Revocation by Unreachability
-     2.6.  State: REV Unreachable
+     2.1.  The Decoupled Identity Model
+     2.2.  Data Flow and Transformation
+     2.3.  Atomic Entity Lifecycle and States
+       2.3.1.  Operational States
+       2.3.2.  2.3.2.  Lifecycle Sequence
+     2.4.  2.4.  Core Operations: Rekeying and Revocation
+     2.5.  2.5.  Local Call Sequence
    3.  Architecture and Design Principles
      3.1.  Identity Pipeline
      3.2.  Authorization Pipeline
@@ -221,176 +220,99 @@ Table of Contents
 2.  Protocol Overview
 
    This section provides a high-level, non-normative overview of the
-   ACE-GF framework.  It is intended to establish a clear mental model
-   for readers before the detailed protocol specification in subsequent
-   sections.
+   ACE-GF framework.  It establishes the mental model for the decoupled
+   architecture before the detailed protocol specification in Section 4.
 
-   The descriptions and diagrams in this section are informational.
-   Normative requirements are defined exclusively in Section 4 and later
-   sections.
+2.1.  The Decoupled Identity Model
 
-2.1.  Atomic Cryptographic Entity Lifecycle
-
-   An Atomic Cryptographic Entity (ACE) represents a stable
-   cryptographic identity whose foundation is a single Root Entropy
-   Value (REV).  Unlike traditional identity systems that rely on
-   persistent storage of a master secret, ACE-GF treats the REV as an
-   ephemeral construct that is reconstructed only when needed and never
-   stored long-term.
-
-   The ACE lifecycle can be summarized as follows:
-
-       +-----------------------------+
-       |        (1) Generate         |
-       |   REV sampled from CSPRNG   |
-       +--------------+--------------+
-                      |
-                      v
-       +-----------------------------+
-       |         (2) Seal            |
-       | REV -> SA via Cred + Salt   |
-       |   (REV not kept at rest)    |
-       +--------------+--------------+
-                      |
-                      v
-       +-----------------------------+
-       |     (3) Store / Transfer    |
-       |   SA is persistent artifact |
-       +--------------+--------------+
-                      |
-                      v
-       +-----------------------------+
-       |      (4) Unseal (on demand) |
-       |   SA + Cred -> REV in RAM   |
-       +--------------+--------------+
-                      |
-                      v
-       +-----------------------------+
-       |        (5) Derive           |
-       |  REV + Ctx -> Derived Keys  |
-       +--------------+--------------+
-                      |
-                      v
-       +-----------------------------+
-       |       (6) Zeroize           |
-       | REV / keys cleared from RAM |
-       +--------------+--------------+
-                      |
-           +----------+----------+
-           |                     |
-           v                     v +----------------------+   +---------------------------+ |   Rekey (Credential) |   | Revocation (Unreachability)| |  New SA, same REV    |   | Break inputs -> no REV     | +----------------------+   +---------------------------+
-
-   From an external perspective, derived public identifiers remain
-   stable as long as the underlying REV remains the same.  Rekeying
-   changes only the ability to reconstruct the REV; revocation breaks
-   reconstruction.
-
-2.2.  High-Level Authorization and Identity Flow
-
-   ACE-GF separates identity functionality into two logically
+   ACE-GF operates on the principle of *Functional Decoupling*. Unlike
+   traditional deterministic systems that require the persistent storage
+   of a master seed, ACE-GF separates the identity into two logically
    independent pipelines:
 
-   *  The *Authorization Pipeline* controls whether the REV can be
-      reconstructed at all (Seal/Unseal).
+   *  *Authorization Pipeline (The "Lock")*: Manages the transformation
+      between a user's volatile *Credential* and a persistent *Sealed
+      Artifact (SA)*. It controls _access_ to the identity.
 
-   *  The *Identity Pipeline* deterministically derives algorithm- and
-      domain-specific keys from the reconstructed REV (Derive).
+   *  *Identity Pipeline (The "Key")*: Performs deterministic derivation
+      from the reconstructed *Root Entropy Value (REV)* to various
+      cryptographic algorithms.  It defines the _substance_ of the
+      identity.
 
-   The following diagram illustrates the high-level data flow:
-   Authorization Pipeline Identity Pipeline ----------------------
-   ----------------- Credential | v Argon2id(Cred, Salt, Profile) | v
-   K_seal (symmetric key) | v AEAD-Unseal(SA, K_seal) | v REV
-   ---------------------------> HKDF-Extract | v PRK | v HKDF-
-   Expand(info = Ctx) | v Algorithm-Specific Keys
+2.2.  Data Flow and Transformation
 
-   This separation enables credential rotation and revocation to be
-   handled without changing derived identifiers, while also enabling
-   multi-algorithm key derivation via explicit context encoding.
+   The following diagram illustrates how entropy flows from a raw state,
+   through the authorization lock, and into algorithm-specific keys:
 
-2.2.1.  Protocol Message Exchange Diagram (Local Call Sequence)
+   ```text Authorization Pipeline Identity Pipeline
+   ---------------------- ----------------- [Credential] + [Salt] | v
+   Argon2id (KDF1) | v K_seal (Symmetric) Derivation Context (Ctx) | | v
+   v AEAD-Decrypt(SA, K_seal) ----> [ REV ] ----> HKDF-Expand (KDF2) | v
+   [ Algorithm-Specific Keys ]
 
-   ACE-GF is a construction and does not require a network protocol.
-   However, implementations typically invoke operations in the following
-   sequence (local call flow): Caller ACE-GF Functions ------
-   -----------------
+2.3.  Atomic Entity Lifecycle and States
 
-   Generate REV --------------> generate_rev() (REV in volatile memory)
+   The lifecycle of an ACE is defined by the availability and
+   reachability of the Root Entropy Value (REV).
 
-   <-------------- REV (RAM)
+2.3.1.  Operational States
 
-   Seal(REV, Cred, Profile) ----> seal_rev() (produces SA)
+   | State | Description | Persistence | | :--- | :--- | :--- | |
+   *Sealed* | The REV is encrypted within a Sealed Artifact (SA). |
+   Persistent (Disk/Storage) | | *Reconstructed* | The REV is unsealed
+   and resides in volatile memory. | Ephemeral (RAM only) | |
+   *Zeroized* | Sensitive material has been wiped.  Identity is
+   dormant. | N/A | | *Unreachable* | The SA is destroyed or Credentials
+   lost. | Permanent (Revoked) |
 
-   <-------------- SA (persistent)
+2.3.2.  2.3.2.  Lifecycle Sequence
 
-   ... later ...
+   1.  *Generate*: A 256-bit REV is sampled from a CSPRNG.
 
-   Unseal(SA, Cred, ProfileID) -> unseal_rev() (REV in RAM or error)
+   2.  *Seal*: The REV is encrypted with a key derived from a Credential
+       and Salt, producing a *Sealed Artifact (SA)*. The raw REV is then
+       zeroized.
 
-   <-------------- REV (RAM) or Error
+   3.  *Unseal*: When an operation is required, the user provides the
+       Credential to decrypt the SA, restoring the REV to RAM.
 
-   Derive(REV, Ctx) ------------> derive_key() (algorithm-specific key
-   material)
+   4.  *Derive*: The REV is used to generate keys for specific contexts
+       (e.g., Ed25519, ML-DSA).
 
-   <-------------- DerivedKey material
+   5.  *Zeroize*: Once complete, the REV and all derived material are
+       wiped from RAM.
 
-   Zeroize ---------------------> zeroize_memory()
+2.4.  2.4.  Core Operations: Rekeying and Revocation
 
-   <-------------- (cleared)
+   By decoupling authorization from identity, ACE-GF enables critical
+   operations without changing underlying cryptographic identifiers
+   (e.g., blockchain addresses):
 
-2.3.  Revocation and Rekeying at a Glance
+   *  *Stateless Rekeying*: To change a password, the entity unseals the
+      REV and re-seals it using a _new_ Credential and _new_ Salt.  The
+      REV remains invariant; thus, all derived public keys remain
+      stable.
 
-   ACE-GF distinguishes between rekeying (updating authorization
-   credentials) and revocation (breaking reconstruction inputs).
+   *  *Revocation by Unreachability*: An identity is effectively revoked
+      by destroying the SA or the credential components.  Without these,
+      the REV is mathematically lost, rendering the identity permanently
+      offline without requiring external revocation lists (CRLs).
 
-2.3.1.  State Transition Overview (Informational)
+2.5.  2.5.  Local Call Sequence
 
-   The diagram below presents a conceptual state model of an ACE with
-   respect to REV reachability.  This is an informational model for
-   understanding lifecycle operations; implementation details are
-   specified elsewhere.  State: SA Available (persistent)
+   The following sequence describes the typical interaction between an
+   application ("Caller") and an ACE-GF implementation:
 
-
-   A valid Sealed Artifact (SA) exists and can be supplied to the
-   authorization pipeline.  | | Unseal(SA, Credential) succeeds v State:
-   REV Reachable (in RAM) ----------------------------- REV is
-   reconstructed in volatile memory and is available for derivation
-   operations.  | | Derive / use keys v State: Zeroized ---------------
-   REV and all derived material have been cleared from memory.  | |
-   (operation completed) v State: SA Available (persistent)
-   -------------------------------- The ACE may be reconstructed again
-   as needed.
-
-2.4.  Rekeying Path (Authorization Update)
-
-   SA Available | | Unseal(SA, old Credential) v REV Reachable | |
-   Seal(REV, new Credential, new Salt) v SA Replaced (same REV, new
-   SA) | v SA Available
-
-2.5.  Revocation by Unreachability
-
-   Any of the following actions render REV reconstruction impossible:
-
-   *  Destruction of the Sealed Artifact (SA), OR
-
-   *  Removal of a required authorization credential component
-
-   Resulting state:
-
-2.6.  State: REV Unreachable
-
-   No valid inputs exist to reconstruct the REV.  All derivation
-   operations fail until valid authorization inputs are restored.
-
-   *Rekeying* changes the authorization material (e.g., new credential
-   and new salt) while preserving the underlying REV, keeping derived
-   identifiers stable.
-
-   *Revocation* makes REV reconstruction impossible until valid inputs
-   are restored by the controlling entity, without requiring external
-   revocation infrastructure such as CRLs or OCSP.
-
-   This state model is conceptual and informational.  Implementations
-   are not required to expose or persist these states explicitly.
+   ```text Caller ACE-GF Implementation | | |-- 1. generate_rev()
+   --------------->| (Samples CSPRNG) |<-- [REV in RAM]
+   --------------------| | | |-- 2. seal_rev(REV, Cred) ---------->|
+   (Argon2id + AES-GCM-SIV) |<-- [Sealed Artifact (SA)] ----------|
+   (Store to disk) | | |-- 3. zeroize_memory() ------------->| (Wipe
+   RAM) | | | ... later (identity usage) ...  | | | |-- 4.
+   unseal_rev(SA, Cred) --------->| (Reconstructs REV in RAM) |-- 5.
+   derive_key(REV, Ctx) ---------->| (HKDF-SHA256) |<-- [Derived Key
+   Material] ----------| |-- 6. zeroize_memory() ------------->| (Wipe
+   RAM)
 
 3.  Architecture and Design Principles
 
