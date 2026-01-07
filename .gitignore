@@ -22,3 +22,4 @@ draft-wang-acegf-protocol.xml
 package-lock.json
 report.xml
 !requirements.txt
+.DS_Store
